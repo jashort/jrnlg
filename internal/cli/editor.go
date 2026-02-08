@@ -22,7 +22,7 @@ func OpenEditor(initialContent string) (string, error) {
 	}(tmpPath)
 
 	// 3. Write initial content
-	if _, err := tmpFile.Write([]byte(initialContent)); err != nil {
+	if _, err := tmpFile.WriteString(initialContent); err != nil {
 		err := errors.Join(err, tmpFile.Close())
 		return "", err
 	}

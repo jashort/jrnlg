@@ -44,7 +44,7 @@ func TestJSONFormatter_SingleEntry(t *testing.T) {
 	result := formatter.Format(entries)
 
 	// Should be valid JSON
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	err := json.Unmarshal([]byte(result), &parsed)
 	if err != nil {
 		t.Fatalf("Expected valid JSON, got error: %v", err)
@@ -63,7 +63,7 @@ func TestJSONFormatter_SingleEntry(t *testing.T) {
 	}
 
 	// Check tags field
-	tags, ok := entry["tags"].([]interface{})
+	tags, ok := entry["tags"].([]interface{}) //nolint:gofmt
 	if !ok {
 		t.Fatal("Expected 'tags' to be array")
 	}
@@ -72,7 +72,7 @@ func TestJSONFormatter_SingleEntry(t *testing.T) {
 	}
 
 	// Check mentions field
-	mentions, ok := entry["mentions"].([]interface{})
+	mentions, ok := entry["mentions"].([]interface{}) //nolint:gofmt
 	if !ok {
 		t.Fatal("Expected 'mentions' to be array")
 	}
@@ -117,7 +117,7 @@ func TestJSONFormatter_MultipleEntries(t *testing.T) {
 	result := formatter.Format(entries)
 
 	// Should be valid JSON
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	err := json.Unmarshal([]byte(result), &parsed)
 	if err != nil {
 		t.Fatalf("Expected valid JSON, got error: %v", err)
@@ -166,7 +166,7 @@ func TestJSONFormatter_RFC3339Timestamp(t *testing.T) {
 	}
 
 	// Should be parseable as RFC3339
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	_ = json.Unmarshal([]byte(result), &parsed)
 
 	timestampStr, ok := parsed[0]["timestamp"].(string)
@@ -202,7 +202,7 @@ func TestJSONFormatter_TimezonePreservation(t *testing.T) {
 
 	result := formatter.Format(entries)
 
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	_ = json.Unmarshal([]byte(result), &parsed)
 
 	timestampStr := parsed[0]["timestamp"].(string)
@@ -228,13 +228,13 @@ func TestJSONFormatter_EmptyArrays(t *testing.T) {
 
 	result := formatter.Format(entries)
 
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	_ = json.Unmarshal([]byte(result), &parsed)
 
 	entry := parsed[0]
 
 	// Tags should be empty array, not null
-	tags, ok := entry["tags"].([]interface{})
+	tags, ok := entry["tags"].([]interface{}) //nolint:gofmt
 	if !ok {
 		t.Error("Expected tags to be array")
 	}
@@ -243,7 +243,7 @@ func TestJSONFormatter_EmptyArrays(t *testing.T) {
 	}
 
 	// Mentions should be empty array, not null
-	mentions, ok := entry["mentions"].([]interface{})
+	mentions, ok := entry["mentions"].([]interface{}) //nolint:gofmt
 	if !ok {
 		t.Error("Expected mentions to be array")
 	}
@@ -268,7 +268,7 @@ func TestJSONFormatter_SpecialCharacters(t *testing.T) {
 	result := formatter.Format(entries)
 
 	// Should be valid JSON (properly escaped)
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	err := json.Unmarshal([]byte(result), &parsed)
 	if err != nil {
 		t.Fatalf("Expected valid JSON with escaped characters, got error: %v", err)
@@ -331,7 +331,7 @@ func TestJSONFormatter_UTF8Characters(t *testing.T) {
 	result := formatter.Format(entries)
 
 	// Should be valid JSON
-	var parsed []map[string]interface{}
+	var parsed []map[string]interface{} //nolint:gofmt
 	err := json.Unmarshal([]byte(result), &parsed)
 	if err != nil {
 		t.Fatalf("Expected valid JSON with UTF-8, got error: %v", err)

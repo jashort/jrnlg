@@ -14,13 +14,7 @@ import (
 // TestSearchIntegration tests the full search workflow with temporary storage
 func TestSearchIntegration(t *testing.T) {
 	// Create temporary directory for test storage
-	tempDir, err := os.MkdirTemp("", "jrnlg-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test config
 	config := &internal.Config{
@@ -249,14 +243,7 @@ func TestSearchIntegration(t *testing.T) {
 
 // TestCreateEntry tests entry creation with temporary storage
 func TestCreateEntry(t *testing.T) {
-	// Create temporary directory for test storage
-	tempDir, err := os.MkdirTemp("", "jrnlg-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer func(path string) {
-		_ = os.RemoveAll(path)
-	}(tempDir)
+	tempDir := t.TempDir()
 
 	// Create test config
 	config := &internal.Config{
@@ -276,7 +263,7 @@ This is a test #entry with @mention.
 
 Multiple paragraphs work too!`
 
-	tmpFile, err := os.CreateTemp("", "entry-*.md")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "entry-*.md")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
