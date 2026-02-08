@@ -10,14 +10,14 @@ import (
 //
 //	Body text
 func SerializeEntry(entry *JournalEntry) string {
-	header := formatTimestamp(entry.Timestamp)
+	header := FormatTimestamp(entry.Timestamp)
 	return fmt.Sprintf("## %s\n\n%s\n", header, entry.Body)
 }
 
-// formatTimestamp formats a timestamp for the entry header
+// FormatTimestamp formats a timestamp for the entry header
 // Format: Weekday YYYY-MM-DD H:MM AM/PM Timezone
 // Example: Sunday 2026-02-08 8:31 AM America/Los_Angeles
-func formatTimestamp(timestamp time.Time) string {
+func FormatTimestamp(timestamp time.Time) string {
 	// Extract components
 	weekday := timestamp.Weekday().String()
 
