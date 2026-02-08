@@ -113,8 +113,8 @@ func TestParseSearchArgs_ToDate(t *testing.T) {
 		t.Fatal("Expected ToDate to be set")
 	}
 
-	// Date-only parsing returns start of day (00:00:00)
-	expected := time.Date(2026, 2, 28, 0, 0, 0, 0, time.UTC)
+	// -to date is set to end of day (23:59:59.999...) for inclusive filtering
+	expected := time.Date(2026, 2, 28, 23, 59, 59, 999999999, time.UTC)
 	if !args.ToDate.Equal(expected) {
 		t.Errorf("Expected ToDate %v, got %v", expected, args.ToDate)
 	}

@@ -42,6 +42,8 @@ func parseSearchArgs(args []string) (SearchArgs, error) {
 				if err != nil {
 					return result, fmt.Errorf("invalid date for -from: %w", err)
 				}
+				// Truncate to start of day (00:00:00) for date comparison
+				date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 				result.FromDate = &date
 
 			case "-to":
@@ -53,6 +55,8 @@ func parseSearchArgs(args []string) (SearchArgs, error) {
 				if err != nil {
 					return result, fmt.Errorf("invalid date for -to: %w", err)
 				}
+				// Truncate to end of day (23:59:59) for inclusive date comparison
+				date = time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999999999, date.Location())
 				result.ToDate = &date
 
 			case "-n", "--limit":
