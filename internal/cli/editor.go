@@ -17,7 +17,9 @@ func OpenEditor(initialContent string) (string, error) {
 		return "", err
 	}
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func(name string) {
+		_ = os.Remove(name)
+	}(tmpPath)
 
 	// 3. Write initial content
 	if _, err := tmpFile.Write([]byte(initialContent)); err != nil {

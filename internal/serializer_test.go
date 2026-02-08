@@ -60,7 +60,7 @@ func TestSerializeEntry(t *testing.T) {
 				Mentions:  []string{},
 				Body:      "UTC entry.",
 			},
-			want: "## Sunday 2026-02-08 4:31 PM UTC\n\nUTC entry.\n",
+			want: "## Sunday 2026-02-08 4:31 PM UTC\n\nUTC entry.\n", //nolint:dupword
 		},
 	}
 
@@ -97,7 +97,7 @@ func TestRoundTrip(t *testing.T) {
 		},
 		{
 			name:     "entry with UTC timezone",
-			markdown: "## Sunday 2026-02-08 4:31 PM UTC\n\nUTC entry.",
+			markdown: "## Sunday 2026-02-08 4:31 PM UTC\n\nUTC entry.", //nolint:dupword
 		},
 	}
 

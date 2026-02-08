@@ -35,9 +35,9 @@ func (a *App) CreateEntry() error {
 
 	// 5. Check for timestamp collision and warn user
 	if a.hasCollision(entry.Timestamp) {
-		fmt.Fprintf(os.Stderr, "Warning: Another entry exists with timestamp %s\n",
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: Another entry exists with timestamp %s\n",
 			entry.Timestamp.Format("2006-01-02 3:04 PM"))
-		fmt.Fprintf(os.Stderr, "Saved with collision suffix\n")
+		_, _ = fmt.Fprintf(os.Stderr, "Saved with collision suffix\n")
 	}
 
 	// 6. Save entry

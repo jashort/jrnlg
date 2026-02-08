@@ -16,7 +16,7 @@ func TestJSONFormatter_Empty(t *testing.T) {
 	result := formatter.Format(entries)
 
 	// Should be valid JSON
-	var parsed []interface{}
+	var parsed []interface{} //nolint:gofmt
 	err := json.Unmarshal([]byte(result), &parsed)
 	if err != nil {
 		t.Fatalf("Expected valid JSON, got error: %v", err)

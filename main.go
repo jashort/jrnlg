@@ -17,7 +17,7 @@ func main() {
 	// Load configuration
 	config, err := internal.LoadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -30,7 +30,7 @@ func main() {
 
 	// Run with command-line arguments
 	if err := app.Run(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
