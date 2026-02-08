@@ -10,7 +10,7 @@ import (
 
 func TestSummaryFormatter_Empty(t *testing.T) {
 	formatter := &SummaryFormatter{}
-	entries := []*internal.JournalEntry{}
+	var entries []*internal.JournalEntry
 
 	result := formatter.Format(entries)
 

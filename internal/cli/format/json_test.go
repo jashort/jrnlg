@@ -11,7 +11,7 @@ import (
 
 func TestJSONFormatter_Empty(t *testing.T) {
 	formatter := &JSONFormatter{}
-	entries := []*internal.JournalEntry{}
+	var entries []*internal.JournalEntry
 
 	result := formatter.Format(entries)
 
@@ -167,7 +167,7 @@ func TestJSONFormatter_RFC3339Timestamp(t *testing.T) {
 
 	// Should be parseable as RFC3339
 	var parsed []map[string]interface{}
-	json.Unmarshal([]byte(result), &parsed)
+	_ = json.Unmarshal([]byte(result), &parsed)
 
 	timestampStr, ok := parsed[0]["timestamp"].(string)
 	if !ok {
@@ -203,7 +203,7 @@ func TestJSONFormatter_TimezonePreservation(t *testing.T) {
 	result := formatter.Format(entries)
 
 	var parsed []map[string]interface{}
-	json.Unmarshal([]byte(result), &parsed)
+	_ = json.Unmarshal([]byte(result), &parsed)
 
 	timestampStr := parsed[0]["timestamp"].(string)
 
@@ -229,7 +229,7 @@ func TestJSONFormatter_EmptyArrays(t *testing.T) {
 	result := formatter.Format(entries)
 
 	var parsed []map[string]interface{}
-	json.Unmarshal([]byte(result), &parsed)
+	_ = json.Unmarshal([]byte(result), &parsed)
 
 	entry := parsed[0]
 

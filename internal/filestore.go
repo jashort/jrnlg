@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -291,7 +292,7 @@ func (fs *FileSystemStorage) writeAtomic(filePath string, content []byte) error 
 
 	// Rename to final path (atomic on POSIX systems)
 	if err := os.Rename(tmpFile, filePath); err != nil {
-		os.Remove(tmpFile) // Clean up temp file on error
+		err = errors.Join(err, os.Remove(tmpFile)) // Clean up temp file on error
 		return err
 	}
 
@@ -313,12 +314,6 @@ func (fs *FileSystemStorage) parseFile(filePath string) (*JournalEntry, error) {
 	}
 
 	return entry, nil
-}
-
-// fileExists checks if a file exists
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // isMarkdownFile checks if a file has .md extension

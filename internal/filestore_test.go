@@ -193,8 +193,8 @@ func TestGetEntry_WithCollision(t *testing.T) {
 		Body:      "Second entry.",
 	}
 
-	storage.SaveEntry(entry1)
-	storage.SaveEntry(entry2)
+	_ = storage.SaveEntry(entry1)
+	_ = storage.SaveEntry(entry2)
 
 	// GetEntry should return the first one (base path)
 	retrieved, err := storage.GetEntry(timestamp)
@@ -332,7 +332,7 @@ func TestWriteAtomic(t *testing.T) {
 
 	// Ensure directory exists
 	testDir := filepath.Join(tmpDir, "test")
-	os.MkdirAll(testDir, 0755)
+	_ = os.MkdirAll(testDir, 0755)
 
 	filePath := filepath.Join(testDir, "test.md")
 	content := []byte("Test content")
@@ -507,7 +507,7 @@ func TestListEntries_DateRange(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Filter for February only
@@ -551,7 +551,7 @@ func TestListEntries_LimitAndOffset(t *testing.T) {
 			Mentions:  []string{},
 			Body:      fmt.Sprintf("Entry %d", i),
 		}
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Test limit
@@ -628,7 +628,7 @@ func TestListEntries_OnlyStartDate(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Filter for entries from February onwards
@@ -671,7 +671,7 @@ func TestListEntries_OnlyEndDate(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Filter for entries up to end of February
@@ -720,7 +720,7 @@ func TestSearchByTags(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Search for single tag
@@ -779,7 +779,7 @@ func TestSearchByMentions(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Search for single mention
@@ -833,7 +833,7 @@ func TestSearchByKeyword(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Search for keyword
@@ -897,7 +897,7 @@ func TestSearchWithDateFilter(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Search with date range filter
@@ -952,7 +952,7 @@ func TestSearchSorting(t *testing.T) {
 	}
 
 	for _, entry := range entries {
-		storage.SaveEntry(entry)
+		_ = storage.SaveEntry(entry)
 	}
 
 	// Search should return sorted results (oldest first)

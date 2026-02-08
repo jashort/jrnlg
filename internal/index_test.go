@@ -35,7 +35,7 @@ func TestIndex_Build(t *testing.T) {
 	for i, entry := range entries {
 		filePath := filepath.Join(tmpDir, fmt.Sprintf("entry%d.md", i))
 		content := SerializeEntry(entry)
-		os.WriteFile(filePath, []byte(content), 0644)
+		_ = os.WriteFile(filePath, []byte(content), 0644)
 		files = append(files, filePath)
 	}
 
@@ -265,7 +265,7 @@ func createTestIndex(t *testing.T) *Index {
 	for i, entry := range entries {
 		filePath := filepath.Join(tmpDir, fmt.Sprintf("entry%d.md", i))
 		content := SerializeEntry(entry)
-		os.WriteFile(filePath, []byte(content), 0644)
+		_ = os.WriteFile(filePath, []byte(content), 0644)
 		files = append(files, filePath)
 	}
 

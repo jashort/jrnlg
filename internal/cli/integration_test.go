@@ -78,11 +78,11 @@ func TestSearchIntegration(t *testing.T) {
 
 		err := fn()
 
-		w.Close()
+		_ = w.Close()
 		os.Stdout = oldStdout
 
 		var buf strings.Builder
-		io.Copy(&buf, r)
+		_, _ = io.Copy(&buf, r)
 		return buf.String(), err
 	}
 
@@ -252,7 +252,9 @@ func TestCreateEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func(path string) {
+		_ = os.RemoveAll(path)
+	}(tempDir)
 
 	// Create test config
 	config := &internal.Config{
@@ -276,13 +278,15 @@ Multiple paragraphs work too!`
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func(name string) {
+		_ = os.Remove(name)
+	}(tmpFile.Name())
 
 	_, err = tmpFile.WriteString(entryContent)
 	if err != nil {
 		t.Fatalf("Failed to write temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Simulate CreateEntry by reading the file and saving it
 	content, err := os.ReadFile(tmpFile.Name())

@@ -10,7 +10,7 @@ import (
 
 func TestFullFormatter_Empty(t *testing.T) {
 	formatter := &FullFormatter{}
-	entries := []*internal.JournalEntry{}
+	var entries []*internal.JournalEntry
 
 	result := formatter.Format(entries)
 
