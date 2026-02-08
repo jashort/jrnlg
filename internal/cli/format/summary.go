@@ -24,9 +24,16 @@ func (f *SummaryFormatter) Format(entries []*internal.JournalEntry) string {
 		// Format timestamp as YYYY-MM-DD HH:MM
 		timestamp := entry.Timestamp.Format("2006-01-02 15:04")
 
-		// Get first line of body, trim whitespace
+		// Get first non-empty line of body, trim whitespace
 		bodyLines := strings.Split(entry.Body, "\n")
-		firstLine := strings.TrimSpace(bodyLines[0])
+		firstLine := ""
+		for _, line := range bodyLines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed != "" {
+				firstLine = trimmed
+				break
+			}
+		}
 
 		// Truncate to 80 chars if longer
 		preview := firstLine

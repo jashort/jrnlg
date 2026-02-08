@@ -1,2 +1,19 @@
+# IDE
 .idea/
-jrnl
+.vscode/
+
+# Build artifacts
+jrnlg
+build/
+dist/
+
+# Test artifacts
+coverage.out
+coverage.html
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local config
+.env

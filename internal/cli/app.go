@@ -10,6 +10,7 @@ import (
 type App struct {
 	storage *internal.FileSystemStorage
 	config  *internal.Config
+	version string
 }
 
 // NewApp creates a new CLI application
@@ -17,7 +18,13 @@ func NewApp(storage *internal.FileSystemStorage, config *internal.Config) *App {
 	return &App{
 		storage: storage,
 		config:  config,
+		version: "dev",
 	}
+}
+
+// SetVersion sets the version string for the application
+func (a *App) SetVersion(version string) {
+	a.version = version
 }
 
 // Run executes the CLI application with the given arguments
@@ -73,14 +80,17 @@ FLAGS:
     -v, --version                   Show version
 
 DATE FORMATS:
-    ISO 8601: 2026-02-09, 2026-02-09T15:45:00
+    ISO 8601:     2026-02-09, 2026-02-09T15:45:00
+    Natural:      yesterday, today, tomorrow
+                  "3 days ago", "1 week ago", "2 weeks ago"
 
 EXAMPLES:
     jrnlg                           # Create new entry
-    jrnlg search #work              # Find work entries
-    jrnlg search @alice             # Find entries mentioning Alice
+    jrnlg search '#work'            # Find work entries (note: quotes required)
+    jrnlg search '@alice'           # Find entries mentioning Alice
     jrnlg list -from yesterday      # Recent entries
-    jrnlg search #work @alice -from 2026-01-01 --summary
+    jrnlg list -from "3 days ago" -to today --summary
+    jrnlg search '#work' '@alice' -from 2026-01-01 --summary
 
 CONFIGURATION:
     JRNLG_STORAGE_PATH              Storage location (default: ~/.jrnlg/entries)
@@ -94,6 +104,6 @@ For more information: https://github.com/jashort/jrnlg
 
 // ShowVersion displays version information
 func (a *App) ShowVersion() error {
-	fmt.Println("jrnlg version 0.1.0")
+	fmt.Printf("jrnlg version %s\n", a.version)
 	return nil
 }

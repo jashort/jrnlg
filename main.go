@@ -8,6 +8,14 @@ import (
 	"github.com/jashort/jrnlg/internal/cli"
 )
 
+// Version information (set via ldflags during build)
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+	builtBy = "manual"
+)
+
 func main() {
 	// Load configuration
 	config, err := internal.LoadConfig()
@@ -21,6 +29,7 @@ func main() {
 
 	// Create CLI app
 	app := cli.NewApp(storage, config)
+	app.SetVersion(version)
 
 	// Run with command-line arguments
 	if err := app.Run(os.Args[1:]); err != nil {
