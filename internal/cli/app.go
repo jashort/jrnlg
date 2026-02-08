@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/jashort/jrnlg/internal"
 )
@@ -104,6 +105,19 @@ For more information: https://github.com/jashort/jrnlg
 
 // ShowVersion displays version information
 func (a *App) ShowVersion() error {
+	var commit, commitTime, modified string
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				commit = setting.Value
+			} else if setting.Key == "vcs.modified" && setting.Value == "true" {
+				modified = " Modified"
+			} else if setting.Key == "vcs.time" {
+				commitTime = setting.Value
+			}
+		}
+	}
+	fmt.Printf("Commit: %s (%s)%s\n", commit, commitTime, modified)
 	fmt.Printf("jrnlg version %s\n", a.version)
 	return nil
 }
