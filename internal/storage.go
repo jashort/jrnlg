@@ -30,6 +30,25 @@ type JournalEntry struct {
 	Body      string
 }
 
+// EntryFilter specifies criteria for filtering journal entries
+type EntryFilter struct {
+	StartDate *time.Time // Inclusive start date (nil = no start limit)
+	EndDate   *time.Time // Inclusive end date (nil = no end limit)
+	Limit     int        // Maximum number of results (0 = no limit)
+	Offset    int        // Number of results to skip (0 = no offset)
+}
+
+// Matches returns true if the given timestamp matches this filter's date range
+func (f EntryFilter) Matches(timestamp time.Time) bool {
+	if f.StartDate != nil && timestamp.Before(*f.StartDate) {
+		return false
+	}
+	if f.EndDate != nil && timestamp.After(*f.EndDate) {
+		return false
+	}
+	return true
+}
+
 func ParseEntry(input string) (*JournalEntry, error) {
 	// Extract header and body
 	header, bodyLines, err := extractHeader(input)
