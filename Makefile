@@ -80,18 +80,6 @@ clean: ## Remove build artifacts
 	rm -f coverage.out coverage.html
 	@echo "Clean complete"
 
-install: build ## Install binary to system
-	@echo "Installing $(BINARY_NAME) to $(INSTALL_PATH)..."
-	@sudo mv $(BINARY_NAME) $(INSTALL_PATH)/
-	@sudo chmod +x $(INSTALL_PATH)/$(BINARY_NAME)
-	@echo "Installed successfully"
-	@echo "Run '$(BINARY_NAME) --help' to get started"
-
-uninstall: ## Uninstall binary from system
-	@echo "Uninstalling $(BINARY_NAME) from $(INSTALL_PATH)..."
-	@sudo rm -f $(INSTALL_PATH)/$(BINARY_NAME)
-	@echo "Uninstalled successfully"
-
 deps: ## Download dependencies
 	@echo "Downloading dependencies...$(NC)"
 	$(GO) mod download
