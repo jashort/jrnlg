@@ -70,8 +70,8 @@ vet: ## Run go vet
 
 lint: ## Run golangci-lint
 	@echo "Running linter..."
-	go tool github.com/golangci/golangci-lint/cmd/golangci-lint run ./...; \
-	echo "Linting complete"; \
+	golangci-lint run ./...
+	echo "Linting complete";
 
 clean: ## Remove build artifacts
 	@echo "Cleaning build artifacts..."
