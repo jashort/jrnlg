@@ -11,9 +11,6 @@ import (
 // Version information (set via ldflags during build)
 var (
 	version = "dev"
-	commit  = "unknown"
-	date    = "unknown"
-	builtBy = "manual"
 )
 
 func main() {

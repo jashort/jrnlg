@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"io/ioutil"
+	"errors"
 	"os"
 	"os/exec"
 )
@@ -12,19 +12,19 @@ func OpenEditor(initialContent string) (string, error) {
 	editor := getEditorCommand()
 
 	// 2. Create temp file
-	tmpfile, err := ioutil.TempFile("", "jrnlg-*.md")
+	tmpFile, err := os.CreateTemp("", "jrnlg-*.md")
 	if err != nil {
 		return "", err
 	}
-	tmpPath := tmpfile.Name()
+	tmpPath := tmpFile.Name()
 	defer os.Remove(tmpPath)
 
 	// 3. Write initial content
-	if _, err := tmpfile.Write([]byte(initialContent)); err != nil {
-		tmpfile.Close()
+	if _, err := tmpFile.Write([]byte(initialContent)); err != nil {
+		err := errors.Join(err, tmpFile.Close())
 		return "", err
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err := tmpFile.Close(); err != nil {
 		return "", err
 	}
 
@@ -39,7 +39,7 @@ func OpenEditor(initialContent string) (string, error) {
 	}
 
 	// 5. Read edited content
-	content, err := ioutil.ReadFile(tmpPath)
+	content, err := os.ReadFile(tmpPath)
 	if err != nil {
 		return "", err
 	}
