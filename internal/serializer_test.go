@@ -20,7 +20,7 @@ func TestSerializeEntry(t *testing.T) {
 				Mentions:  []string{"alice", "bob"},
 				Body:      "Had a meeting with @Alice and @Bob about #work #meeting.",
 			},
-			want: "## Sunday 2026-02-08 8:31 AM America/Los_Angeles\n\nHad a meeting with @Alice and @Bob about #work #meeting.\n",
+			want: "## Sunday 2026-02-08 8:31 AM PST\n\nHad a meeting with @Alice and @Bob about #work #meeting.\n",
 		},
 		{
 			name: "entry with 12 AM (midnight)",
@@ -30,7 +30,7 @@ func TestSerializeEntry(t *testing.T) {
 				Mentions:  []string{},
 				Body:      "Midnight thoughts.",
 			},
-			want: "## Sunday 2026-02-08 12:15 AM America/Los_Angeles\n\nMidnight thoughts.\n",
+			want: "## Sunday 2026-02-08 12:15 AM PST\n\nMidnight thoughts.\n",
 		},
 		{
 			name: "entry with 12 PM (noon)",
@@ -40,7 +40,7 @@ func TestSerializeEntry(t *testing.T) {
 				Mentions:  []string{},
 				Body:      "Lunch time!",
 			},
-			want: "## Sunday 2026-02-08 12:00 PM America/Los_Angeles\n\nLunch time!\n",
+			want: "## Sunday 2026-02-08 12:00 PM PST\n\nLunch time!\n",
 		},
 		{
 			name: "entry with multiline body",
@@ -50,7 +50,7 @@ func TestSerializeEntry(t *testing.T) {
 				Mentions:  []string{},
 				Body:      "Line one.\nLine two.\nLine three.",
 			},
-			want: "## Sunday 2026-02-08 2:30 PM America/Los_Angeles\n\nLine one.\nLine two.\nLine three.\n",
+			want: "## Sunday 2026-02-08 2:30 PM PST\n\nLine one.\nLine two.\nLine three.\n",
 		},
 		{
 			name: "entry with UTC timezone",
@@ -81,19 +81,19 @@ func TestRoundTrip(t *testing.T) {
 	}{
 		{
 			name:     "basic entry",
-			markdown: "## Sunday 2026-02-08 8:31 AM America/Los_Angeles\n\nWorked on some #things with @Alice.",
+			markdown: "## Sunday 2026-02-08 8:31 AM PST\n\nWorked on some #things with @Alice.",
 		},
 		{
 			name:     "entry with 12 AM",
-			markdown: "## Sunday 2026-02-08 12:15 AM America/Los_Angeles\n\nMidnight thoughts.",
+			markdown: "## Sunday 2026-02-08 12:15 AM PST\n\nMidnight thoughts.",
 		},
 		{
 			name:     "entry with 12 PM",
-			markdown: "## Sunday 2026-02-08 12:00 PM America/Los_Angeles\n\nLunch time!",
+			markdown: "## Sunday 2026-02-08 12:00 PM PST\n\nLunch time!",
 		},
 		{
 			name:     "entry with multiline body",
-			markdown: "## Sunday 2026-02-08 2:30 PM America/Los_Angeles\n\nLine one.\nLine two.\nLine three.",
+			markdown: "## Sunday 2026-02-08 2:30 PM PST\n\nLine one.\nLine two.\nLine three.",
 		},
 		{
 			name:     "entry with UTC timezone",
@@ -136,27 +136,27 @@ func TestFormatTimestamp(t *testing.T) {
 		{
 			name:      "morning time",
 			timestamp: mustParseTime("2026-02-08T08:31:00", "America/Los_Angeles"),
-			want:      "Sunday 2026-02-08 8:31 AM America/Los_Angeles",
+			want:      "Sunday 2026-02-08 8:31 AM PST",
 		},
 		{
 			name:      "afternoon time",
 			timestamp: mustParseTime("2026-02-08T14:22:00", "America/Los_Angeles"),
-			want:      "Sunday 2026-02-08 2:22 PM America/Los_Angeles",
+			want:      "Sunday 2026-02-08 2:22 PM PST",
 		},
 		{
 			name:      "midnight (12 AM)",
 			timestamp: mustParseTime("2026-02-08T00:00:00", "America/Los_Angeles"),
-			want:      "Sunday 2026-02-08 12:00 AM America/Los_Angeles",
+			want:      "Sunday 2026-02-08 12:00 AM PST",
 		},
 		{
 			name:      "noon (12 PM)",
 			timestamp: mustParseTime("2026-02-08T12:00:00", "America/Los_Angeles"),
-			want:      "Sunday 2026-02-08 12:00 PM America/Los_Angeles",
+			want:      "Sunday 2026-02-08 12:00 PM PST",
 		},
 		{
 			name:      "single digit minute",
 			timestamp: mustParseTime("2026-02-08T09:05:00", "America/Los_Angeles"),
-			want:      "Sunday 2026-02-08 9:05 AM America/Los_Angeles",
+			want:      "Sunday 2026-02-08 9:05 AM PST",
 		},
 		{
 			name:      "UTC timezone",
@@ -166,7 +166,7 @@ func TestFormatTimestamp(t *testing.T) {
 		{
 			name:      "different timezone",
 			timestamp: mustParseTime("2026-02-08T14:31:00", "America/New_York"),
-			want:      "Sunday 2026-02-08 2:31 PM America/New_York",
+			want:      "Sunday 2026-02-08 2:31 PM EST",
 		},
 	}
 

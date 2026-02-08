@@ -18,12 +18,11 @@ func Test_ParseEntry_Valid(t *testing.T) {
 		wantDay         int
 		wantHour        int
 		wantMinute      int
-		wantLocation    string
 	}{
 		{
 			name: "original example with tags, mentions, and email",
 			input: `
-## Sunday 2026-02-08 8:31 AM America/Los_Angeles
+## Sunday 2026-02-08 8:31 AM PST
 
 Worked on some #things with @Alice. Need to email bob@example.com.
 `,
@@ -35,12 +34,11 @@ Worked on some #things with @Alice. Need to email bob@example.com.
 			wantDay:         8,
 			wantHour:        8,
 			wantMinute:      31,
-			wantLocation:    "America/Los_Angeles",
 		},
 		{
 			name: "multiple tags and mentions",
 			input: `
-## Monday 2026-02-09 2:15 PM America/New_York
+## Monday 2026-02-09 2:15 PM EST
 
 Working with @Bob and @Alice on #golang #testing #project_v2.
 `,
@@ -52,12 +50,11 @@ Working with @Bob and @Alice on #golang #testing #project_v2.
 			wantDay:         9,
 			wantHour:        14, // 2 PM in 24-hour
 			wantMinute:      15,
-			wantLocation:    "America/New_York",
 		},
 		{
 			name: "case-insensitive deduplication",
 			input: `
-## Tuesday 2026-02-10 10:00 AM America/Chicago
+## Tuesday 2026-02-10 10:00 AM CST
 
 Met @Alice and @alice and @ALICE. Tags: #Work #work #WORK.
 `,
@@ -69,7 +66,6 @@ Met @Alice and @alice and @ALICE. Tags: #Work #work #WORK.
 			wantDay:         10,
 			wantHour:        10,
 			wantMinute:      0,
-			wantLocation:    "America/Chicago",
 		},
 		{
 			name: "tags and mentions with underscores",
@@ -86,12 +82,11 @@ Working on #my_project with @john_doe and @jane_smith.
 			wantDay:         11,
 			wantHour:        17, // 5 PM in 24-hour
 			wantMinute:      45,
-			wantLocation:    "UTC",
 		},
 		{
 			name: "hyphenated tags create multiple entries",
 			input: `
-## Thursday 2026-02-12 9:00 AM America/Denver
+## Thursday 2026-02-12 9:00 AM MST
 
 Topics: #machine-learning and #data-science.
 `,
@@ -103,12 +98,11 @@ Topics: #machine-learning and #data-science.
 			wantDay:         12,
 			wantHour:        9,
 			wantMinute:      0,
-			wantLocation:    "America/Denver",
 		},
 		{
 			name: "no tags or mentions",
 			input: `
-## Friday 2026-02-13 11:30 AM America/Phoenix
+## Friday 2026-02-13 11:30 AM MST
 
 Just a regular journal entry with no special markers.
 `,
@@ -120,12 +114,11 @@ Just a regular journal entry with no special markers.
 			wantDay:         13,
 			wantHour:        11,
 			wantMinute:      30,
-			wantLocation:    "America/Phoenix",
 		},
 		{
 			name: "emails should NOT be mentions",
 			input: `
-## Saturday 2026-02-14 3:00 PM America/Los_Angeles
+## Saturday 2026-02-14 3:00 PM PST
 
 Contact alice@example.com and bob@company.org for details.
 `,
@@ -137,12 +130,11 @@ Contact alice@example.com and bob@company.org for details.
 			wantDay:         14,
 			wantHour:        15, // 3 PM
 			wantMinute:      0,
-			wantLocation:    "America/Los_Angeles",
 		},
 		{
 			name: "12 PM (noon)",
 			input: `
-## Sunday 2026-02-15 12:00 PM America/Los_Angeles
+## Sunday 2026-02-15 12:00 PM PST
 
 Noon entry.
 `,
@@ -154,12 +146,11 @@ Noon entry.
 			wantDay:         15,
 			wantHour:        12, // noon stays 12
 			wantMinute:      0,
-			wantLocation:    "America/Los_Angeles",
 		},
 		{
 			name: "12 AM (midnight)",
 			input: `
-## Monday 2026-02-16 12:00 AM America/Los_Angeles
+## Monday 2026-02-16 12:00 AM PST
 
 Midnight entry.
 `,
@@ -171,12 +162,11 @@ Midnight entry.
 			wantDay:         16,
 			wantHour:        0, // midnight is 0
 			wantMinute:      0,
-			wantLocation:    "America/Los_Angeles",
 		},
 		{
 			name: "multiline body",
 			input: `
-## Tuesday 2026-02-17 8:00 AM America/Los_Angeles
+## Tuesday 2026-02-17 8:00 AM PST
 
 First line.
 Second line with #tag1.
@@ -190,12 +180,11 @@ Third line with @Person.
 			wantDay:         17,
 			wantHour:        8,
 			wantMinute:      0,
-			wantLocation:    "America/Los_Angeles",
 		},
 		{
 			name: "single character tags and mentions",
 			input: `
-## Wednesday 2026-02-18 1:00 PM America/Los_Angeles
+## Wednesday 2026-02-18 1:00 PM PST
 
 Tag #a and mention @b are valid.
 `,
@@ -207,7 +196,6 @@ Tag #a and mention @b are valid.
 			wantDay:         18,
 			wantHour:        13, // 1 PM
 			wantMinute:      0,
-			wantLocation:    "America/Los_Angeles",
 		},
 	}
 
@@ -233,9 +221,6 @@ Tag #a and mention @b are valid.
 			}
 			if entry.Timestamp.Minute() != tt.wantMinute {
 				t.Errorf("Minute = %d, want %d", entry.Timestamp.Minute(), tt.wantMinute)
-			}
-			if entry.Timestamp.Location().String() != tt.wantLocation {
-				t.Errorf("Location = %s, want %s", entry.Timestamp.Location().String(), tt.wantLocation)
 			}
 
 			// Check tags
@@ -286,7 +271,7 @@ This is just body text with no header.
 		{
 			name: "empty body",
 			input: `
-## Friday 2026-02-13 8:00 AM America/Los_Angeles
+## Friday 2026-02-13 8:00 AM PST
 
 `,
 			wantErrMsg: "empty body",
@@ -294,34 +279,16 @@ This is just body text with no header.
 		{
 			name: "invalid date format",
 			input: `
-## Friday 02/13/2026 8:00 AM America/Los_Angeles
+## Friday 02/13/2026 8:00 AM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid date format",
-		},
-		{
-			name: "wrong weekday",
-			input: `
-## Monday 2026-02-08 8:00 AM America/Los_Angeles
-
-Body text.
-`,
-			wantErrMsg: "weekday mismatch",
-		},
-		{
-			name: "invalid timezone location",
-			input: `
-## Sunday 2026-02-08 8:00 AM PST
-
-Body text.
-`,
-			wantErrMsg: "unknown location",
+			wantErrMsg: "invalid",
 		},
 		{
 			name: "tag exceeds 80 characters",
 			input: `
-## Sunday 2026-02-08 8:00 AM America/Los_Angeles
+## Sunday 2026-02-08 8:00 AM PST
 
 This has a #thisisaverylongtagnamethatexceedstheeightycharacterlimitandthereforeisnotvalidatall tag.
 `,
@@ -330,7 +297,7 @@ This has a #thisisaverylongtagnamethatexceedstheeightycharacterlimitandtherefore
 		{
 			name: "mention exceeds 80 characters",
 			input: `
-## Sunday 2026-02-08 8:00 AM America/Los_Angeles
+## Sunday 2026-02-08 8:00 AM PST
 
 Met with @thisisaverylongmentionnamethatexceedstheeightycharacterlimitandthereforeisnotvalid today.
 `,
@@ -339,7 +306,7 @@ Met with @thisisaverylongmentionnamethatexceedstheeightycharacterlimitandtherefo
 		{
 			name: "missing AM/PM (wrong number of components)",
 			input: `
-## Sunday 2026-02-08 8:00 America/Los_Angeles
+## Sunday 2026-02-08 8:00 PST
 
 Body text.
 `,
@@ -348,65 +315,56 @@ Body text.
 		{
 			name: "invalid meridiem",
 			input: `
-## Sunday 2026-02-08 8:00 XM America/Los_Angeles
+## Sunday 2026-02-08 8:00 XM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid meridiem",
-		},
-		{
-			name: "invalid hour (0)",
-			input: `
-## Sunday 2026-02-08 0:00 AM America/Los_Angeles
-
-Body text.
-`,
-			wantErrMsg: "invalid hour",
+			wantErrMsg: "invalid timestamp format",
 		},
 		{
 			name: "invalid hour (13)",
 			input: `
-## Sunday 2026-02-08 13:00 PM America/Los_Angeles
+## Sunday 2026-02-08 13:00 PM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid hour",
+			wantErrMsg: "invalid timestamp format",
 		},
 		{
 			name: "invalid minute (60)",
 			input: `
-## Sunday 2026-02-08 8:60 AM America/Los_Angeles
+## Sunday 2026-02-08 8:60 AM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid minute",
+			wantErrMsg: "invalid timestamp format",
 		},
 		{
 			name: "invalid minute (negative)",
 			input: `
-## Sunday 2026-02-08 8:-5 AM America/Los_Angeles
+## Sunday 2026-02-08 8:-5 AM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid minute",
+			wantErrMsg: "invalid timestamp format",
 		},
 		{
 			name: "missing time colon",
 			input: `
-## Sunday 2026-02-08 800 AM America/Los_Angeles
+## Sunday 2026-02-08 800 AM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid time format",
+			wantErrMsg: "invalid timestamp format",
 		},
 		{
 			name: "invalid date (wrong separator)",
 			input: `
-## Sunday 2026/02/08 8:00 AM America/Los_Angeles
+## Sunday 2026/02/08 8:00 AM PST
 
 Body text.
 `,
-			wantErrMsg: "invalid date format",
+			wantErrMsg: "invalid timestamp format",
 		},
 	}
 

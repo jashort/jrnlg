@@ -40,9 +40,9 @@ func TestSummaryFormatter_SingleEntry(t *testing.T) {
 		t.Error("Expected 'Found 1 entries:' in output")
 	}
 
-	// Should contain timestamp in YYYY-MM-DD HH:MM format
-	if !strings.Contains(result, "2026-02-09 14:30") {
-		t.Error("Expected timestamp in YYYY-MM-DD HH:MM format")
+	// Should contain timestamp in YYYY-MM-DD HH:MM TZ format
+	if !strings.Contains(result, "2026-02-09 2:30 PM UTC") {
+		t.Error("Expected timestamp in YYYY-MM-DD H:MM PM TZ format")
 	}
 
 	// Should contain pipe separator
@@ -89,13 +89,13 @@ func TestSummaryFormatter_MultipleEntries(t *testing.T) {
 	}
 
 	// Each entry line should contain timestamp and body
-	if !strings.Contains(result, "2026-02-08 10:00") {
+	if !strings.Contains(result, "2026-02-08 10:00 AM UTC") {
 		t.Error("Expected first entry timestamp")
 	}
-	if !strings.Contains(result, "2026-02-09 14:30") {
+	if !strings.Contains(result, "2026-02-09 2:30 PM UTC") {
 		t.Error("Expected second entry timestamp")
 	}
-	if !strings.Contains(result, "2026-02-10 09:15") {
+	if !strings.Contains(result, "2026-02-10 9:15 AM UTC") {
 		t.Error("Expected third entry timestamp")
 	}
 }

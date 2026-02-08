@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -106,106 +105,23 @@ func extractHeader(input string) (string, []string, error) {
 }
 
 // parseTimestamp parses the header into a time.Time
-// Expected format: "Weekday YYYY-MM-DD H:MM AM/PM Location"
+// Expected format: "Monday 2006-01-02 3:04 PM MST"
 func parseTimestamp(header string) (time.Time, error) {
-	parts := strings.Fields(header)
+	// Try parsing with the standard format
+	// The format string "Monday 2006-01-02 3:04 PM MST" handles:
+	// - Weekday name (Monday, Tuesday, etc.)
+	// - Date in YYYY-MM-DD format
+	// - Time in 12-hour format with no leading zero (3:04 not 03:04)
+	// - AM/PM
+	// - Timezone abbreviation (PST, EST, MST, UTC, etc.)
 
-	if len(parts) != 5 {
-		return time.Time{}, fmt.Errorf("invalid timestamp format: expected '## Weekday YYYY-MM-DD H:MM AM/PM Location', got: %s", header)
-	}
-
-	weekdayStr := parts[0]
-	dateStr := parts[1]
-	timeStr := parts[2]
-	meridiem := parts[3]
-	locationStr := parts[4]
-
-	// Validate meridiem
-	if meridiem != "AM" && meridiem != "PM" {
-		return time.Time{}, fmt.Errorf("invalid meridiem: expected AM or PM, got: %s", meridiem)
-	}
-
-	// Parse date (YYYY-MM-DD)
-	dateParts := strings.Split(dateStr, "-")
-	if len(dateParts) != 3 {
-		return time.Time{}, fmt.Errorf("invalid date format: expected YYYY-MM-DD, got: %s", dateStr)
-	}
-
-	year, err := strconv.Atoi(dateParts[0])
+	const layout = "Monday 2006-01-02 3:04 PM MST"
+	timestamp, err := time.Parse(layout, header)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid year: %s", dateParts[0])
-	}
-
-	month, err := strconv.Atoi(dateParts[1])
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid month: %s", dateParts[1])
-	}
-
-	day, err := strconv.Atoi(dateParts[2])
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid day: %s", dateParts[2])
-	}
-
-	// Parse time (H:MM or HH:MM)
-	timeParts := strings.Split(timeStr, ":")
-	if len(timeParts) != 2 {
-		return time.Time{}, fmt.Errorf("invalid time format: expected H:MM or HH:MM, got: %s", timeStr)
-	}
-
-	hour, err := strconv.Atoi(timeParts[0])
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid hour: %s", timeParts[0])
-	}
-
-	minute, err := strconv.Atoi(timeParts[1])
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid minute: %s", timeParts[1])
-	}
-
-	// Validate hour and minute ranges
-	if hour < 1 || hour > 12 {
-		return time.Time{}, fmt.Errorf("invalid hour: must be between 1 and 12, got: %d", hour)
-	}
-	if minute < 0 || minute > 59 {
-		return time.Time{}, fmt.Errorf("invalid minute: must be between 0 and 59, got: %d", minute)
-	}
-
-	// Convert to 24-hour format
-	if meridiem == "AM" {
-		if hour == 12 {
-			hour = 0 // 12 AM is midnight (00:00)
-		}
-	} else { // PM
-		if hour != 12 {
-			hour += 12 // 1 PM = 13:00, 11 PM = 23:00, but 12 PM stays 12:00
-		}
-	}
-
-	// Load timezone location
-	location, err := time.LoadLocation(locationStr)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("unknown location: %s: %w", locationStr, err)
-	}
-
-	// Create time.Time
-	timestamp := time.Date(year, time.Month(month), day, hour, minute, 0, 0, location)
-
-	// Validate weekday matches
-	if err := validateWeekday(weekdayStr, timestamp); err != nil {
-		return time.Time{}, err
+		return time.Time{}, fmt.Errorf("invalid timestamp format: expected 'Monday 2006-01-02 3:04 PM MST', got: %s (error: %w)", header, err)
 	}
 
 	return timestamp, nil
-}
-
-// validateWeekday checks if the weekday string matches the actual date
-func validateWeekday(weekdayStr string, date time.Time) error {
-	expectedWeekday := date.Weekday().String()
-	if weekdayStr != expectedWeekday {
-		return fmt.Errorf("weekday mismatch: expected %s, got %s for date %s",
-			expectedWeekday, weekdayStr, date.Format("2006-01-02"))
-	}
-	return nil
 }
 
 // extractTags finds all hashtags in text

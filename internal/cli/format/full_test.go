@@ -146,9 +146,9 @@ func TestFullFormatter_TimezonePreservation(t *testing.T) {
 
 	result := formatter.Format(entries)
 
-	// Should contain timezone in formatted timestamp
-	if !strings.Contains(result, "America/Los_Angeles") {
-		t.Error("Expected timezone to be preserved in output")
+	// Should contain timezone abbreviation in formatted timestamp
+	if !strings.Contains(result, "PST") {
+		t.Error("Expected timezone abbreviation (PST) to be preserved in output")
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 type SummaryFormatter struct{}
 
 // Format returns entries in summary format (one line per entry)
-// Format: YYYY-MM-DD HH:MM | First 80 chars of body...
+// Format: YYYY-MM-DD H:MM PM MST | First 80 chars of body...
 func (f *SummaryFormatter) Format(entries []*internal.JournalEntry) string {
 	if len(entries) == 0 {
 		return "Found 0 entries.\n"
@@ -21,8 +21,9 @@ func (f *SummaryFormatter) Format(entries []*internal.JournalEntry) string {
 	sb.WriteString(fmt.Sprintf("Found %d entries:\n\n", len(entries)))
 
 	for _, entry := range entries {
-		// Format timestamp as YYYY-MM-DD HH:MM
-		timestamp := entry.Timestamp.Format("2006-01-02 15:04")
+		// Format timestamp with timezone abbreviation (MST format)
+		// Format: YYYY-MM-DD H:MM PM TZ
+		timestamp := entry.Timestamp.Format("2006-01-02 3:04 PM MST")
 
 		// Get first non-empty line of body, trim whitespace
 		bodyLines := strings.Split(entry.Body, "\n")
