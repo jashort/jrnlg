@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -452,6 +453,68 @@ func (fs *FileSystemStorage) InvalidateIndex() {
 	fs.index = nil
 }
 
+// GetTagStatistics returns tag usage counts across all entries
+// Builds index if needed
+func (fs *FileSystemStorage) GetTagStatistics() (map[string]int, error) {
+	// Get or create index
+	filter := EntryFilter{} // No filters, index all entries
+	index, err := fs.getOrCreateIndex(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get index: %w", err)
+	}
+
+	return index.TagStatistics(), nil
+}
+
+// GetMentionStatistics returns mention usage counts across all entries
+// Builds index if needed
+func (fs *FileSystemStorage) GetMentionStatistics() (map[string]int, error) {
+	// Get or create index
+	filter := EntryFilter{} // No filters, index all entries
+	index, err := fs.getOrCreateIndex(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get index: %w", err)
+	}
+
+	return index.MentionStatistics(), nil
+}
+
+// GetEntriesWithTag returns file paths for all entries with the specified tag
+func (fs *FileSystemStorage) GetEntriesWithTag(tag string) ([]string, error) {
+	// Get or create index
+	filter := EntryFilter{} // No filters, index all entries
+	index, err := fs.getOrCreateIndex(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get index: %w", err)
+	}
+
+	entries := index.GetEntriesForTag(tag)
+	paths := make([]string, len(entries))
+	for i, entry := range entries {
+		paths[i] = entry.FilePath
+	}
+
+	return paths, nil
+}
+
+// GetEntriesWithMention returns file paths for all entries with the specified mention
+func (fs *FileSystemStorage) GetEntriesWithMention(mention string) ([]string, error) {
+	// Get or create index
+	filter := EntryFilter{} // No filters, index all entries
+	index, err := fs.getOrCreateIndex(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get index: %w", err)
+	}
+
+	entries := index.GetEntriesForMention(mention)
+	paths := make([]string, len(entries))
+	for i, entry := range entries {
+		paths[i] = entry.FilePath
+	}
+
+	return paths, nil
+}
+
 // GetEntryPath returns the file path for an entry by timestamp
 // Handles collision suffixes (-01, -02, etc.)
 func (fs *FileSystemStorage) GetEntryPath(timestamp time.Time) (string, error) {
@@ -571,4 +634,182 @@ func (fs *FileSystemStorage) DeleteEntries(filter EntryFilter) ([]string, error)
 	}
 
 	return deleted, nil
+}
+
+// ReplaceTagInEntries replaces oldTag with newTag in all entries
+// Uses case-insensitive matching with proper word boundaries
+// Returns list of updated file paths
+func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun bool) ([]string, error) {
+	// Get entries with old tag using index
+	filePaths, err := fs.GetEntriesWithTag(oldTag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entries with tag: %w", err)
+	}
+
+	if len(filePaths) == 0 {
+		return []string{}, nil
+	}
+
+	// Build regex pattern for case-insensitive replacement
+	// Pattern: #oldTag followed by non-word-char (but not hyphen/underscore)
+	// This ensures we match #code but not #code-review
+	pattern := fmt.Sprintf(`(?i)#%s(?:[^a-zA-Z0-9_-]|$)`, regexp.QuoteMeta(oldTag))
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile regex: %w", err)
+	}
+
+	var updated []string
+	var errs []error
+
+	for _, filePath := range filePaths {
+		// Read current entry
+		entry, err := fs.parseFile(filePath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to read %s: %w", filePath, err))
+			continue
+		}
+
+		// Replace tag in body (case-insensitive)
+		// Use ReplaceAllStringFunc to preserve the character after the tag
+		newBody := re.ReplaceAllStringFunc(entry.Body, func(match string) string {
+			// The match includes "#" + tag (case-insensitive) + possibly one trailing character
+			// Find where the tag ends (it starts with # and continues until non-tag-char)
+			if len(match) > 1 && match[0] == '#' {
+				// Skip the # and find the end of the tag
+				i := 1
+				for i < len(match) && (match[i] >= 'a' && match[i] <= 'z' ||
+					match[i] >= 'A' && match[i] <= 'Z' ||
+					match[i] >= '0' && match[i] <= '9' ||
+					match[i] == '_' || match[i] == '-') {
+					i++
+				}
+				// Everything after position i is the trailing character(s)
+				return "#" + newTag + match[i:]
+			}
+			return "#" + newTag
+		})
+
+		// Skip if no changes (shouldn't happen, but safety check)
+		if newBody == entry.Body {
+			continue
+		}
+
+		// Update entry body
+		entry.Body = newBody
+
+		// Re-parse to validate and auto-deduplicate tags
+		// This ensures tags like "#code-review #code-review" become single tag
+		serialized := SerializeEntry(entry)
+		entry, err = ParseEntry(serialized)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to parse updated entry %s: %w", filePath, err))
+			continue
+		}
+
+		// Write updated entry (unless dry run)
+		if !dryRun {
+			if err := fs.UpdateEntry(filePath, entry); err != nil {
+				errs = append(errs, fmt.Errorf("failed to update %s: %w", filePath, err))
+				continue
+			}
+		}
+
+		updated = append(updated, filePath)
+	}
+
+	// Return results
+	if len(errs) > 0 {
+		return updated, errors.Join(errs...)
+	}
+
+	return updated, nil
+}
+
+// ReplaceMentionInEntries replaces oldMention with newMention in all entries
+// Uses case-insensitive matching with proper word boundaries
+// Returns list of updated file paths
+func (fs *FileSystemStorage) ReplaceMentionInEntries(oldMention, newMention string, dryRun bool) ([]string, error) {
+	// Get entries with old mention using index
+	filePaths, err := fs.GetEntriesWithMention(oldMention)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entries with mention: %w", err)
+	}
+
+	if len(filePaths) == 0 {
+		return []string{}, nil
+	}
+
+	// Build regex pattern for case-insensitive replacement
+	// Pattern: @oldMention followed by non-word-char (but not hyphen/underscore)
+	pattern := fmt.Sprintf(`(?i)@%s(?:[^a-zA-Z0-9_-]|$)`, regexp.QuoteMeta(oldMention))
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile regex: %w", err)
+	}
+
+	var updated []string
+	var errs []error
+
+	for _, filePath := range filePaths {
+		// Read current entry
+		entry, err := fs.parseFile(filePath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to read %s: %w", filePath, err))
+			continue
+		}
+
+		// Replace mention in body (case-insensitive)
+		// Use ReplaceAllStringFunc to preserve the character after the mention
+		newBody := re.ReplaceAllStringFunc(entry.Body, func(match string) string {
+			// The match includes "@" + mention (case-insensitive) + possibly one trailing character
+			// Find where the mention ends (it starts with @ and continues until non-mention-char)
+			if len(match) > 1 && match[0] == '@' {
+				// Skip the @ and find the end of the mention
+				i := 1
+				for i < len(match) && (match[i] >= 'a' && match[i] <= 'z' ||
+					match[i] >= 'A' && match[i] <= 'Z' ||
+					match[i] >= '0' && match[i] <= '9' ||
+					match[i] == '_' || match[i] == '-') {
+					i++
+				}
+				// Everything after position i is the trailing character(s)
+				return "@" + newMention + match[i:]
+			}
+			return "@" + newMention
+		})
+
+		// Skip if no changes (shouldn't happen, but safety check)
+		if newBody == entry.Body {
+			continue
+		}
+
+		// Update entry body
+		entry.Body = newBody
+
+		// Re-parse to validate and auto-deduplicate mentions
+		serialized := SerializeEntry(entry)
+		entry, err = ParseEntry(serialized)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to parse updated entry %s: %w", filePath, err))
+			continue
+		}
+
+		// Write updated entry (unless dry run)
+		if !dryRun {
+			if err := fs.UpdateEntry(filePath, entry); err != nil {
+				errs = append(errs, fmt.Errorf("failed to update %s: %w", filePath, err))
+				continue
+			}
+		}
+
+		updated = append(updated, filePath)
+	}
+
+	// Return results
+	if len(errs) > 0 {
+		return updated, errors.Join(errs...)
+	}
+
+	return updated, nil
 }

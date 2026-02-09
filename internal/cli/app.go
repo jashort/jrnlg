@@ -54,6 +54,10 @@ func (a *App) Run(args []string) error {
 		return a.EditEntry(args[1:])
 	case "delete", "rm":
 		return a.DeleteEntries(args[1:])
+	case "tags":
+		return a.HandleTagsCommand(args[1:])
+	case "mentions":
+		return a.HandleMentionsCommand(args[1:])
 	default:
 		// Treat as implicit search (backward compatibility)
 		return a.Search(args)
@@ -70,6 +74,8 @@ USAGE:
     jrnlg list [terms] [flags]      List journal entries (alias for search)
     jrnlg edit [selector]           Edit an entry
     jrnlg delete [selector] [flags] Delete entries
+    jrnlg tags [command]            Manage tags
+    jrnlg mentions [command]        Manage mentions
 
 EDIT SELECTORS:
     jrnlg edit                      Edit most recent entry
@@ -80,6 +86,22 @@ DELETE SELECTORS:
     jrnlg delete 2026-02-08-21-32-00       Delete specific entry
     jrnlg delete --from yesterday          Delete entries from date range
     jrnlg delete --from yesterday --force  Skip confirmation
+
+TAG COMMANDS:
+    jrnlg tags                      List all tags with usage counts
+    jrnlg tags list                 List all tags (same as above)
+    jrnlg tags list --orphaned      Show only tags used once
+    jrnlg tags rename OLD NEW       Rename tag (case-insensitive)
+    jrnlg tags rename OLD NEW --dry-run    Preview changes without applying
+    jrnlg tags rename OLD NEW --force      Skip confirmation prompt
+
+MENTION COMMANDS:
+    jrnlg mentions                  List all mentions with usage counts
+    jrnlg mentions list             List all mentions (same as above)
+    jrnlg mentions list --orphaned  Show only mentions used once
+    jrnlg mentions rename OLD NEW   Rename mention (case-insensitive)
+    jrnlg mentions rename OLD NEW --dry-run    Preview changes
+    jrnlg mentions rename OLD NEW --force      Skip confirmation
 
 SEARCH TERMS:
     #tag                            Find entries with this tag
@@ -97,7 +119,7 @@ FLAGS:
     --summary                       Show compact summary format
     --format <fmt>                  Output format: full, summary, json
     --color <mode>                  Color mode: auto, always, never
-    -f, --force                     Skip confirmation (delete only)
+    -f, --force                     Skip confirmation (delete/tags/mentions)
     -h, --help                      Show this help
     -v, --version                   Show version
 
@@ -117,6 +139,9 @@ EXAMPLES:
     jrnlg list --from yesterday     # Recent entries
     jrnlg list --from "3 days ago" --to today --summary
     jrnlg search '#work' '@alice' --from 2026-01-01 --summary
+    jrnlg tags                      # List all tags
+    jrnlg tags rename code_review code-review    # Merge tag variations
+    jrnlg mentions rename alice alice-smith      # Rename mention
 
 CONFIGURATION:
     JRNLG_STORAGE_PATH              Storage location (default: ~/.jrnlg/entries)

@@ -6,6 +6,7 @@ A fast, minimal CLI journal application written in Go. Inspired by [jrnl](https:
 - **Fast & Simple**: One Markdown file per entry, no database required
 - **Natural Language Dates**: Search using "yesterday", "3 days ago", "last week"
 - **Rich Metadata**: Automatic extraction of #tags, @mentions, and timestamps
+- **Tag & Mention Management**: List and rename tags/mentions across all entries
 - **Edit & Delete**: Edit existing entries or delete by date range with confirmation
 - **Colorized Output**: Beautiful syntax highlighting for timestamps, tags, and mentions with smart terminal detection
 - **Multiple Output Formats**: Full, summary, or JSON output
@@ -134,6 +135,53 @@ jrnlg search '#work' '@alice' deadline
 # Search with date ranges
 jrnlg search '#work' --from 2024-01-01 --to 2024-12-31
 ```
+
+### Managing Tags and Mentions
+
+Over time, you might accumulate inconsistent tags (e.g., `#code_review`, `#Code_Review`, `#code-review`). The tags and mentions commands help you find and merge these variations.
+
+**List all tags with usage counts:**
+
+```bash
+# List all tags alphabetically
+jrnlg tags
+
+# List only tags used once (orphaned tags)
+jrnlg tags list --orphaned
+```
+
+**Rename tags (case-insensitive, merges all variations):**
+
+```bash
+# Rename a tag - will match #code_review, #Code_Review, etc.
+jrnlg tags rename code_review code-review
+
+# Preview changes without applying them
+jrnlg tags rename code_review code-review --dry-run
+
+# Skip confirmation prompt
+jrnlg tags rename code_review code-review --force
+```
+
+**Manage mentions:**
+
+```bash
+# List all mentions
+jrnlg mentions
+
+# Rename a mention (case-insensitive)
+jrnlg mentions rename john_doe john-smith
+
+# Preview changes
+jrnlg mentions rename john_doe john-smith --dry-run
+```
+
+**Key features:**
+- **Case-insensitive**: Matches and renames `#Code_Review`, `#CODE_REVIEW`, `#code-review`
+- **Automatic deduplication**: Merges duplicate tags after renaming
+- **Preview before changes**: Shows affected entries before applying changes
+- **Safe by default**: Asks for confirmation unless `--force` is used
+- **Warning on merges**: Shows a warning if the target tag/mention already exists
 
 ### Natural Language Date Filters
 
@@ -328,6 +376,58 @@ Options:
   Same as list command
 ```
 
+### Tags Command
+
+```
+jrnlg tags [command] [options]
+
+Commands:
+  (none), list            List all tags with usage counts
+  rename OLD NEW          Rename tag across all entries (case-insensitive)
+
+List Options:
+  --orphaned              Show only tags used once
+
+Rename Options:
+  --dry-run               Preview changes without applying
+  --force                 Skip confirmation prompt
+
+Examples:
+  jrnlg tags                              # List all tags
+  jrnlg tags list --orphaned              # Show tags used only once
+  jrnlg tags rename code_review code-review   # Merge tag variations
+  jrnlg tags rename old new --dry-run     # Preview changes
+  jrnlg tags rename old new --force       # Skip confirmation
+
+Note: Rename is case-insensitive. "code_review" matches #code_review, 
+#Code_Review, #CODE_REVIEW, etc.
+```
+
+### Mentions Command
+
+```
+jrnlg mentions [command] [options]
+
+Commands:
+  (none), list            List all mentions with usage counts
+  rename OLD NEW          Rename mention across all entries (case-insensitive)
+
+List Options:
+  --orphaned              Show only mentions used once
+
+Rename Options:
+  --dry-run               Preview changes without applying
+  --force                 Skip confirmation prompt
+
+Examples:
+  jrnlg mentions                          # List all mentions
+  jrnlg mentions list --orphaned          # Show mentions used only once
+  jrnlg mentions rename john_doe john-smith  # Rename mention
+  jrnlg mentions rename old new --dry-run # Preview changes
+
+Note: Rename is case-insensitive and matches all variations.
+```
+
 ## Examples
 
 ### Daily Journaling
@@ -373,6 +473,43 @@ jrnlg edit yesterday
 
 # Delete old test entries
 jrnlg delete --from "1 month ago" --to "2 weeks ago" --force
+```
+
+### Tag Management
+
+```bash
+# After months of journaling, you notice inconsistent tags
+jrnlg tags
+# Output shows:
+#   #code-review (15 entries)
+#   #code_review (8 entries)
+#   #Code_Review (3 entries)
+
+# Merge all variations into one consistent format
+jrnlg tags rename code_review code-review
+# Shows preview and asks for confirmation
+# After confirming: ✓ Updated 11 entries
+
+# Verify the merge
+jrnlg tags
+# Output now shows:
+#   #code-review (26 entries)
+
+# Find tags you only used once (might be typos)
+jrnlg tags list --orphaned
+# Output:
+#   #meetting (1 entry)    # Typo!
+#   #wrok (1 entry)        # Another typo!
+
+# Fix the typos
+jrnlg tags rename meetting meeting
+jrnlg tags rename wrok work
+
+# Preview changes before applying
+jrnlg tags rename old-name new-name --dry-run
+
+# Batch rename without confirmation (use carefully!)
+jrnlg tags rename temporary-tag permanent-tag --force
 ```
 
 ## Development

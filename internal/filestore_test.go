@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -981,6 +982,15 @@ func containsTag(tags []string, target string) bool {
 	return false
 }
 
+func containsMention(mentions []string, target string) bool {
+	for _, mention := range mentions {
+		if mention == target {
+			return true
+		}
+	}
+	return false
+}
+
 func TestInvalidateIndex(t *testing.T) {
 	tmpDir := t.TempDir()
 	storage := NewFileSystemStorage(tmpDir, nil)
@@ -1357,5 +1367,776 @@ func TestDeleteEntries_Empty(t *testing.T) {
 
 	if len(remaining) != 1 {
 		t.Errorf("ListEntries() returned %d entries, want 1", len(remaining))
+	}
+}
+
+func TestGetTagStatistics(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries with various tags
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{"work", "meeting"},
+			Mentions:  []string{},
+			Body:      "Work meeting. #work #meeting",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{"work"},
+			Mentions:  []string{},
+			Body:      "More work. #work",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{"personal"},
+			Mentions:  []string{},
+			Body:      "Personal stuff. #personal",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Get tag statistics
+	stats, err := storage.GetTagStatistics()
+	if err != nil {
+		t.Fatalf("GetTagStatistics() error = %v", err)
+	}
+
+	// Should have 3 unique tags
+	if len(stats) != 3 {
+		t.Errorf("GetTagStatistics() returned %d tags, want 3", len(stats))
+	}
+
+	// Check counts
+	if stats["work"] != 2 {
+		t.Errorf("Expected 2 entries with #work, got %d", stats["work"])
+	}
+
+	if stats["meeting"] != 1 {
+		t.Errorf("Expected 1 entry with #meeting, got %d", stats["meeting"])
+	}
+
+	if stats["personal"] != 1 {
+		t.Errorf("Expected 1 entry with #personal, got %d", stats["personal"])
+	}
+}
+
+func TestGetTagStatistics_Empty(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	// Get tag statistics from empty storage
+	stats, err := storage.GetTagStatistics()
+	if err != nil {
+		t.Fatalf("GetTagStatistics() error = %v", err)
+	}
+
+	if len(stats) != 0 {
+		t.Errorf("GetTagStatistics() returned %d tags for empty storage, want 0", len(stats))
+	}
+}
+
+func TestGetMentionStatistics(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries with various mentions
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice", "bob"},
+			Body:      "Meeting with @alice and @bob.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice"},
+			Body:      "Coffee with @alice.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"charlie"},
+			Body:      "Lunch with @charlie.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Get mention statistics
+	stats, err := storage.GetMentionStatistics()
+	if err != nil {
+		t.Fatalf("GetMentionStatistics() error = %v", err)
+	}
+
+	// Should have 3 unique mentions
+	if len(stats) != 3 {
+		t.Errorf("GetMentionStatistics() returned %d mentions, want 3", len(stats))
+	}
+
+	// Check counts
+	if stats["alice"] != 2 {
+		t.Errorf("Expected 2 entries with @alice, got %d", stats["alice"])
+	}
+
+	if stats["bob"] != 1 {
+		t.Errorf("Expected 1 entry with @bob, got %d", stats["bob"])
+	}
+
+	if stats["charlie"] != 1 {
+		t.Errorf("Expected 1 entry with @charlie, got %d", stats["charlie"])
+	}
+}
+
+func TestGetEntriesWithTag(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{"work"},
+			Mentions:  []string{},
+			Body:      "Work entry. #work",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{"work"},
+			Mentions:  []string{},
+			Body:      "More work. #work",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{"personal"},
+			Mentions:  []string{},
+			Body:      "Personal. #personal",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Get entries with #work
+	paths, err := storage.GetEntriesWithTag("work")
+	if err != nil {
+		t.Fatalf("GetEntriesWithTag() error = %v", err)
+	}
+
+	if len(paths) != 2 {
+		t.Errorf("GetEntriesWithTag('work') returned %d paths, want 2", len(paths))
+	}
+
+	// Get entries with non-existent tag
+	paths, err = storage.GetEntriesWithTag("nonexistent")
+	if err != nil {
+		t.Fatalf("GetEntriesWithTag() error = %v", err)
+	}
+
+	if len(paths) != 0 {
+		t.Errorf("GetEntriesWithTag('nonexistent') returned %d paths, want 0", len(paths))
+	}
+}
+
+func TestGetEntriesWithMention(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice"},
+			Body:      "Meeting with @alice.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice"},
+			Body:      "Coffee with @alice.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"bob"},
+			Body:      "Lunch with @bob.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Get entries with @alice
+	paths, err := storage.GetEntriesWithMention("alice")
+	if err != nil {
+		t.Fatalf("GetEntriesWithMention() error = %v", err)
+	}
+
+	if len(paths) != 2 {
+		t.Errorf("GetEntriesWithMention('alice') returned %d paths, want 2", len(paths))
+	}
+
+	// Get entries with non-existent mention
+	paths, err = storage.GetEntriesWithMention("nonexistent")
+	if err != nil {
+		t.Fatalf("GetEntriesWithMention() error = %v", err)
+	}
+
+	if len(paths) != 0 {
+		t.Errorf("GetEntriesWithMention('nonexistent') returned %d paths, want 0", len(paths))
+	}
+}
+
+func TestReplaceTagInEntries_Single(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry with old tag
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"old-tag"},
+		Mentions:  []string{},
+		Body:      "Testing #old-tag replacement.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Replace tag
+	updated, err := storage.ReplaceTagInEntries("old-tag", "new-tag", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 1", len(updated))
+	}
+
+	// Verify entry was updated
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	if !containsTag(entries[0].Tags, "new-tag") {
+		t.Errorf("Entry tags = %v, want to contain 'new-tag'", entries[0].Tags)
+	}
+
+	if containsTag(entries[0].Tags, "old-tag") {
+		t.Errorf("Entry still contains 'old-tag', want it removed")
+	}
+
+	if !strings.Contains(entries[0].Body, "#new-tag") {
+		t.Errorf("Entry body = %q, want to contain '#new-tag'", entries[0].Body)
+	}
+}
+
+func TestReplaceTagInEntries_Multiple(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create multiple entries with same tag
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{"code-review"},
+			Mentions:  []string{},
+			Body:      "First #code-review.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{"code-review"},
+			Mentions:  []string{},
+			Body:      "Second #code-review.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{"meeting"},
+			Mentions:  []string{},
+			Body:      "Unrelated #meeting.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Replace tag
+	updated, err := storage.ReplaceTagInEntries("code-review", "codereview", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 2 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 2", len(updated))
+	}
+
+	// Verify correct entries were updated
+	allEntries, _ := storage.ListEntries(EntryFilter{})
+	codeReviewCount := 0
+	for _, e := range allEntries {
+		if containsTag(e.Tags, "codereview") {
+			codeReviewCount++
+		}
+		if containsTag(e.Tags, "code-review") {
+			t.Error("Entry still contains old tag 'code-review'")
+		}
+	}
+
+	if codeReviewCount != 2 {
+		t.Errorf("Found %d entries with new tag, want 2", codeReviewCount)
+	}
+}
+
+func TestReplaceTagInEntries_CaseInsensitive(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries with different case variations
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{"code-review"},
+			Mentions:  []string{},
+			Body:      "First #code-review.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{"code-review"},
+			Mentions:  []string{},
+			Body:      "Second #Code-Review.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{"code-review"},
+			Mentions:  []string{},
+			Body:      "Third #CODE-REVIEW.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Replace tag (should match all case variations)
+	updated, err := storage.ReplaceTagInEntries("code-review", "codereview", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 3 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 3", len(updated))
+	}
+
+	// Verify all entries now have new tag
+	allEntries, _ := storage.ListEntries(EntryFilter{})
+	for i, e := range allEntries {
+		if !containsTag(e.Tags, "codereview") {
+			t.Errorf("Entry %d missing new tag 'codereview', has: %v", i, e.Tags)
+		}
+		if strings.Contains(strings.ToLower(e.Body), "code-review") ||
+			strings.Contains(strings.ToLower(e.Body), "code_review") {
+			t.Errorf("Entry %d body still contains old tag variations: %q", i, e.Body)
+		}
+	}
+}
+
+func TestReplaceTagInEntries_WordBoundaries(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry with similar tags
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"code", "code-review"},
+		Mentions:  []string{},
+		Body:      "Testing #code and #code-review.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Replace only #code (should not affect #code-review)
+	updated, err := storage.ReplaceTagInEntries("code", "programming", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 1", len(updated))
+	}
+
+	// Verify only #code was replaced
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	if !containsTag(entries[0].Tags, "programming") {
+		t.Errorf("Entry missing new tag 'programming', has: %v", entries[0].Tags)
+	}
+
+	if !containsTag(entries[0].Tags, "code-review") {
+		t.Errorf("Entry missing 'code-review' tag, has: %v", entries[0].Tags)
+	}
+
+	if !strings.Contains(entries[0].Body, "#programming") {
+		t.Errorf("Body missing '#programming': %q", entries[0].Body)
+	}
+
+	if !strings.Contains(entries[0].Body, "#code-review") {
+		t.Errorf("Body missing '#code-review': %q", entries[0].Body)
+	}
+}
+
+func TestReplaceTagInEntries_Deduplication(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry where old tag already exists alongside target tag
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"code-review", "codereview"},
+		Mentions:  []string{},
+		Body:      "Testing #code-review and #codereview.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Replace code-review with codereview (should merge/dedupe)
+	updated, err := storage.ReplaceTagInEntries("code-review", "codereview", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 1", len(updated))
+	}
+
+	// Verify deduplication occurred
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	// Count occurrences of codereview tag (should be deduplicated to 1)
+	codeReviewCount := 0
+	for _, tag := range entries[0].Tags {
+		if tag == "codereview" {
+			codeReviewCount++
+		}
+	}
+
+	if codeReviewCount != 1 {
+		t.Errorf("Tag 'codereview' appears %d times, want 1 (deduplication failed)", codeReviewCount)
+	}
+}
+
+func TestReplaceTagInEntries_DryRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"old-tag"},
+		Mentions:  []string{},
+		Body:      "Testing #old-tag.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Dry run - should not modify files
+	updated, err := storage.ReplaceTagInEntries("old-tag", "new-tag", true)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceTagInEntries() found %d entries to update, want 1", len(updated))
+	}
+
+	// Verify entry was NOT updated
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	if !containsTag(entries[0].Tags, "old-tag") {
+		t.Errorf("Entry tags = %v, want to contain 'old-tag' (should not be modified in dry run)", entries[0].Tags)
+	}
+
+	if containsTag(entries[0].Tags, "new-tag") {
+		t.Errorf("Entry contains 'new-tag', but should not be modified in dry run")
+	}
+}
+
+func TestReplaceTagInEntries_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry with different tag
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"existing-tag"},
+		Mentions:  []string{},
+		Body:      "Testing #existing-tag.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Try to replace non-existent tag
+	updated, err := storage.ReplaceTagInEntries("nonexistent", "new-tag", false)
+	if err != nil {
+		t.Fatalf("ReplaceTagInEntries() error = %v", err)
+	}
+
+	if len(updated) != 0 {
+		t.Errorf("ReplaceTagInEntries() updated %d entries, want 0", len(updated))
+	}
+}
+
+func TestReplaceMentionInEntries_Single(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry with old mention
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{},
+		Mentions:  []string{"john_doe"},
+		Body:      "Meeting with @john_doe.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Replace mention
+	updated, err := storage.ReplaceMentionInEntries("john_doe", "john-doe", false)
+	if err != nil {
+		t.Fatalf("ReplaceMentionInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceMentionInEntries() updated %d entries, want 1", len(updated))
+	}
+
+	// Verify entry was updated
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	if !containsMention(entries[0].Mentions, "john-doe") {
+		t.Errorf("Entry mentions = %v, want to contain 'john-doe'", entries[0].Mentions)
+	}
+
+	if containsMention(entries[0].Mentions, "john_doe") {
+		t.Errorf("Entry still contains 'john_doe', want it removed")
+	}
+
+	if !strings.Contains(entries[0].Body, "@john-doe") {
+		t.Errorf("Entry body = %q, want to contain '@john-doe'", entries[0].Body)
+	}
+}
+
+func TestReplaceMentionInEntries_Multiple(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create multiple entries with same mention
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice"},
+			Body:      "First meeting with @alice.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"alice"},
+			Body:      "Second meeting with @alice.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"bob"},
+			Body:      "Meeting with @bob.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Replace mention
+	updated, err := storage.ReplaceMentionInEntries("alice", "alice-smith", false)
+	if err != nil {
+		t.Fatalf("ReplaceMentionInEntries() error = %v", err)
+	}
+
+	if len(updated) != 2 {
+		t.Errorf("ReplaceMentionInEntries() updated %d entries, want 2", len(updated))
+	}
+
+	// Verify correct entries were updated
+	allEntries, _ := storage.ListEntries(EntryFilter{})
+	aliceSmithCount := 0
+	for _, e := range allEntries {
+		if containsMention(e.Mentions, "alice-smith") {
+			aliceSmithCount++
+		}
+		if containsMention(e.Mentions, "alice") {
+			t.Error("Entry still contains old mention 'alice'")
+		}
+	}
+
+	if aliceSmithCount != 2 {
+		t.Errorf("Found %d entries with new mention, want 2", aliceSmithCount)
+	}
+}
+
+func TestReplaceMentionInEntries_CaseInsensitive(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries with different case variations
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"john"},
+			Body:      "Meeting with @john.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 16, 10, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"john"},
+			Body:      "Call with @John.",
+		},
+		{
+			Timestamp: time.Date(2026, 1, 17, 11, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{"john"},
+			Body:      "Email from @JOHN.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Replace mention (should match all case variations)
+	updated, err := storage.ReplaceMentionInEntries("john", "john-smith", false)
+	if err != nil {
+		t.Fatalf("ReplaceMentionInEntries() error = %v", err)
+	}
+
+	if len(updated) != 3 {
+		t.Errorf("ReplaceMentionInEntries() updated %d entries, want 3", len(updated))
+	}
+
+	// Verify all entries now have new mention
+	allEntries, _ := storage.ListEntries(EntryFilter{})
+	for i, e := range allEntries {
+		if !containsMention(e.Mentions, "john-smith") {
+			t.Errorf("Entry %d missing new mention 'john-smith', has: %v", i, e.Mentions)
+		}
+	}
+}
+
+func TestReplaceMentionInEntries_DryRun(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{},
+		Mentions:  []string{"alice"},
+		Body:      "Meeting with @alice.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Dry run - should not modify files
+	updated, err := storage.ReplaceMentionInEntries("alice", "alice-smith", true)
+	if err != nil {
+		t.Fatalf("ReplaceMentionInEntries() error = %v", err)
+	}
+
+	if len(updated) != 1 {
+		t.Errorf("ReplaceMentionInEntries() found %d entries to update, want 1", len(updated))
+	}
+
+	// Verify entry was NOT updated
+	entries, _ := storage.ListEntries(EntryFilter{})
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	if !containsMention(entries[0].Mentions, "alice") {
+		t.Errorf("Entry mentions = %v, want to contain 'alice' (should not be modified in dry run)", entries[0].Mentions)
+	}
+
+	if containsMention(entries[0].Mentions, "alice-smith") {
+		t.Errorf("Entry contains 'alice-smith', but should not be modified in dry run")
+	}
+}
+
+func TestReplaceMentionInEntries_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entry with different mention
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{},
+		Mentions:  []string{"alice"},
+		Body:      "Meeting with @alice.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Try to replace non-existent mention
+	updated, err := storage.ReplaceMentionInEntries("bob", "robert", false)
+	if err != nil {
+		t.Fatalf("ReplaceMentionInEntries() error = %v", err)
+	}
+
+	if len(updated) != 0 {
+		t.Errorf("ReplaceMentionInEntries() updated %d entries, want 0", len(updated))
 	}
 }

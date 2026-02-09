@@ -10,8 +10,8 @@ var (
 	// Example: #work, #machine-learning, #project_alpha
 	Tag = regexp.MustCompile(`#([a-zA-Z][a-zA-Z0-9_-]*)`)
 
-	// Mention matches: @letter followed by alphanumeric/underscore
+	// Mention matches: @letter followed by alphanumeric/underscore/hyphen
 	// The @ must not be preceded by alphanumeric (excludes emails)
-	// Example: @alice, @bob_smith (but not bob@example.com)
-	Mention = regexp.MustCompile(`(?:^|[^a-zA-Z0-9_])@([a-zA-Z][a-zA-Z0-9_]*)`)
+	// Example: @alice, @bob-smith, @bob_smith (but not bob@example.com)
+	Mention = regexp.MustCompile(`(?:^|[^a-zA-Z0-9_-])@([a-zA-Z][a-zA-Z0-9_-]*)`)
 )

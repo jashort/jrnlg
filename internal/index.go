@@ -245,3 +245,47 @@ func (idx *Index) hasAllMentions(entry *IndexedEntry, mentions []string) bool {
 
 	return true
 }
+
+// TagStatistics returns a map of tag -> count of entries with that tag
+func (idx *Index) TagStatistics() map[string]int {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	stats := make(map[string]int)
+	for tag, entries := range idx.tagIndex {
+		stats[tag] = len(entries)
+	}
+
+	return stats
+}
+
+// MentionStatistics returns a map of mention -> count of entries with that mention
+func (idx *Index) MentionStatistics() map[string]int {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	stats := make(map[string]int)
+	for mention, entries := range idx.mentionIndex {
+		stats[mention] = len(entries)
+	}
+
+	return stats
+}
+
+// GetEntriesForTag returns all entries with the specified tag
+func (idx *Index) GetEntriesForTag(tag string) []*IndexedEntry {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	normalized := strings.ToLower(tag)
+	return idx.tagIndex[normalized]
+}
+
+// GetEntriesForMention returns all entries with the specified mention
+func (idx *Index) GetEntriesForMention(mention string) []*IndexedEntry {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	normalized := strings.ToLower(mention)
+	return idx.mentionIndex[normalized]
+}

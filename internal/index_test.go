@@ -297,3 +297,129 @@ func contains(slice []string, str string) bool {
 	}
 	return false
 }
+
+func TestIndex_TagStatistics(t *testing.T) {
+	index := createTestIndex(t)
+
+	stats := index.TagStatistics()
+
+	// Should have 3 unique tags: work, meeting, personal
+	if len(stats) != 3 {
+		t.Errorf("Expected 3 unique tags, got %d", len(stats))
+	}
+
+	// Check counts
+	if stats["work"] != 2 {
+		t.Errorf("Expected 2 entries with #work, got %d", stats["work"])
+	}
+
+	if stats["meeting"] != 1 {
+		t.Errorf("Expected 1 entry with #meeting, got %d", stats["meeting"])
+	}
+
+	if stats["personal"] != 1 {
+		t.Errorf("Expected 1 entry with #personal, got %d", stats["personal"])
+	}
+}
+
+func TestIndex_TagStatistics_Empty(t *testing.T) {
+	index := NewIndex()
+
+	stats := index.TagStatistics()
+
+	if len(stats) != 0 {
+		t.Errorf("Expected 0 tags in empty index, got %d", len(stats))
+	}
+}
+
+func TestIndex_MentionStatistics(t *testing.T) {
+	index := createTestIndex(t)
+
+	stats := index.MentionStatistics()
+
+	// Should have 3 unique mentions: alice, bob, charlie
+	if len(stats) != 3 {
+		t.Errorf("Expected 3 unique mentions, got %d", len(stats))
+	}
+
+	// Check counts
+	if stats["alice"] != 1 {
+		t.Errorf("Expected 1 entry with @alice, got %d", stats["alice"])
+	}
+
+	if stats["bob"] != 1 {
+		t.Errorf("Expected 1 entry with @bob, got %d", stats["bob"])
+	}
+
+	if stats["charlie"] != 1 {
+		t.Errorf("Expected 1 entry with @charlie, got %d", stats["charlie"])
+	}
+}
+
+func TestIndex_MentionStatistics_Empty(t *testing.T) {
+	index := NewIndex()
+
+	stats := index.MentionStatistics()
+
+	if len(stats) != 0 {
+		t.Errorf("Expected 0 mentions in empty index, got %d", len(stats))
+	}
+}
+
+func TestIndex_GetEntriesForTag(t *testing.T) {
+	index := createTestIndex(t)
+
+	// Get entries with #work
+	entries := index.GetEntriesForTag("work")
+
+	if len(entries) != 2 {
+		t.Errorf("Expected 2 entries with #work, got %d", len(entries))
+	}
+
+	// Get entries with non-existent tag
+	entries = index.GetEntriesForTag("nonexistent")
+
+	if len(entries) != 0 {
+		t.Errorf("Expected 0 entries with #nonexistent, got %d", len(entries))
+	}
+}
+
+func TestIndex_GetEntriesForTag_CaseInsensitive(t *testing.T) {
+	index := createTestIndex(t)
+
+	// Tags are stored lowercase, so WORK should find work
+	entries := index.GetEntriesForTag("WORK")
+
+	if len(entries) != 2 {
+		t.Errorf("Expected 2 entries with #WORK (case-insensitive), got %d", len(entries))
+	}
+}
+
+func TestIndex_GetEntriesForMention(t *testing.T) {
+	index := createTestIndex(t)
+
+	// Get entries with @alice
+	entries := index.GetEntriesForMention("alice")
+
+	if len(entries) != 1 {
+		t.Errorf("Expected 1 entry with @alice, got %d", len(entries))
+	}
+
+	// Get entries with non-existent mention
+	entries = index.GetEntriesForMention("nonexistent")
+
+	if len(entries) != 0 {
+		t.Errorf("Expected 0 entries with @nonexistent, got %d", len(entries))
+	}
+}
+
+func TestIndex_GetEntriesForMention_CaseInsensitive(t *testing.T) {
+	index := createTestIndex(t)
+
+	// Mentions are stored lowercase, so ALICE should find alice
+	entries := index.GetEntriesForMention("ALICE")
+
+	if len(entries) != 1 {
+		t.Errorf("Expected 1 entry with @ALICE (case-insensitive), got %d", len(entries))
+	}
+}
