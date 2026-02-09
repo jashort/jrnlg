@@ -6,6 +6,7 @@ A fast, minimal CLI journal application written in Go. Inspired by [jrnl](https:
 - **Fast & Simple**: One Markdown file per entry, no database required
 - **Natural Language Dates**: Search using "yesterday", "3 days ago", "last week"
 - **Rich Metadata**: Automatic extraction of #tags, @mentions, and timestamps
+- **Colorized Output**: Beautiful syntax highlighting for timestamps, tags, and mentions with smart terminal detection
 - **Multiple Output Formats**: Full, summary, or JSON output
 - **Timezone Aware**: Preserves original timezone abbreviation (PST, EST, etc.) in entry content
 - **Search**: Filter by tags, mentions, keywords, and date ranges
@@ -128,6 +129,33 @@ jrnlg search #work      # ❌ Wrong - # treated as comment
 - `JRNLG_STORAGE_PATH` - Storage location (default: `~/.jrnlg/entries`)
 - `VISUAL` or `EDITOR` - Editor to use (default: vim → vi → nano)
 - `JRNLG_EDITOR_ARGS` - Additional arguments passed to the editor (optional)
+- `NO_COLOR` - Set to any value to disable colored output (follows [no-color.org](https://no-color.org/) standard)
+
+### Color Output
+
+jrnlg uses colors to make output more readable by highlighting timestamps, tags, and mentions:
+
+```bash
+# Auto mode (default) - colors when outputting to terminal, plain when piped
+jrnlg list
+
+# Always use colors (even when piped)
+jrnlg list --color always
+
+# Never use colors
+jrnlg list --color never
+
+# Disable colors via environment variable
+NO_COLOR=1 jrnlg list
+```
+
+**Color scheme:**
+- Timestamps: cyan
+- Tags (#work): green  
+- Mentions (@alice): yellow
+- Metadata/separators: dim gray
+
+Colors are automatically disabled when output is redirected or piped, and respect the `NO_COLOR` environment variable.
 
 ### Editor Configuration
 
@@ -205,6 +233,7 @@ Options:
   --format <format>    Output format: full, summary, json (default: full)
   --from <date>        Start date (ISO 8601 or natural language)
   --to <date>          End date (ISO 8601 or natural language)
+  --color <mode>       Color mode: auto, always, never (default: auto)
 ```
 
 ### Search Command

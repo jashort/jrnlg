@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 func TestSummaryFormatter_Empty(t *testing.T) {
 	formatter := &SummaryFormatter{}
 	var entries []*internal.JournalEntry
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	expected := "Found 0 entries.\n"
 	if result != expected {
@@ -33,7 +35,8 @@ func TestSummaryFormatter_SingleEntry(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain header
 	if !strings.Contains(result, "Found 1 entries:") {
@@ -74,7 +77,8 @@ func TestSummaryFormatter_MultipleEntries(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain header with count
 	if !strings.Contains(result, "Found 3 entries:") {
@@ -112,7 +116,8 @@ func TestSummaryFormatter_Truncation(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should truncate to 77 chars + "..."
 	if strings.Contains(result, strings.Repeat("a", 80)) {
@@ -157,7 +162,8 @@ func TestSummaryFormatter_ExactlyEightyChars(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should NOT add ellipsis for exactly 80 chars
 	if strings.Contains(result, "...") {
@@ -182,7 +188,8 @@ func TestSummaryFormatter_UnderEightyChars(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should NOT truncate
 	if !strings.Contains(result, body) {
@@ -207,7 +214,8 @@ func TestSummaryFormatter_MultilineBody(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain first line
 	if !strings.Contains(result, "First line of text") {
@@ -235,7 +243,8 @@ func TestSummaryFormatter_WhitespaceHandling(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should trim whitespace
 	if !strings.Contains(result, "Text with spaces") {
@@ -267,7 +276,8 @@ func TestSummaryFormatter_EmptyLines(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should skip empty lines and show first non-empty line
 	if !strings.Contains(result, "Actual content here") {

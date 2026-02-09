@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 // JSONFormatter displays entries as JSON
@@ -19,7 +20,8 @@ type jsonEntry struct {
 }
 
 // Format returns entries in JSON format
-func (f *JSONFormatter) Format(entries []*internal.JournalEntry) string {
+// Colorizer is accepted but ignored (JSON is never colored)
+func (f *JSONFormatter) Format(entries []*internal.JournalEntry, _ *color.Colorizer) string {
 	// Convert to JSON-friendly format
 	jsonEntries := make([]jsonEntry, len(entries))
 	for i, entry := range entries {

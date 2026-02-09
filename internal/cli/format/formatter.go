@@ -2,11 +2,12 @@ package format
 
 import (
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
-// Formatter is the interface for output formatters
+// Formatter formats journal entries for display
 type Formatter interface {
-	Format(entries []*internal.JournalEntry) string
+	Format(entries []*internal.JournalEntry, c *color.Colorizer) string
 }
 
 // GetFormatter returns the appropriate formatter based on format name

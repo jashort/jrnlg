@@ -2,24 +2,16 @@ package internal
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jashort/jrnlg/internal/patterns"
 )
 
 const (
 	MaxTagLength     = 80
 	MaxMentionLength = 80
-)
-
-var (
-	// Matches: #letter followed by alphanumeric/underscore/hyphen
-	// Hyphens will be split later to create multiple tags
-	tagRegex = regexp.MustCompile(`#([a-zA-Z][a-zA-Z0-9_-]*)`)
-	// Matches: @letter followed by alphanumeric/underscore, where @ is not preceded by alphanumeric
-	// This excludes emails like bob@example.com
-	mentionRegex = regexp.MustCompile(`(?:^|[^a-zA-Z0-9_])@([a-zA-Z][a-zA-Z0-9_]*)`)
 )
 
 type JournalEntry struct {
@@ -126,7 +118,7 @@ func parseTimestamp(header string) (time.Time, error) {
 
 // extractTags finds all hashtags in text
 func extractTags(text string) ([]string, error) {
-	matches := tagRegex.FindAllStringSubmatch(text, -1)
+	matches := patterns.Tag.FindAllStringSubmatch(text, -1)
 
 	tagMap := make(map[string]bool)
 	for _, match := range matches {
@@ -171,7 +163,7 @@ func extractTags(text string) ([]string, error) {
 
 // extractMentions finds all @mentions in text (excluding emails)
 func extractMentions(text string) ([]string, error) {
-	matches := mentionRegex.FindAllStringSubmatch(text, -1)
+	matches := patterns.Mention.FindAllStringSubmatch(text, -1)
 
 	mentionMap := make(map[string]bool)
 	for _, match := range matches {

@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 func TestJSONFormatter_Empty(t *testing.T) {
 	formatter := &JSONFormatter{}
 	var entries []*internal.JournalEntry
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be valid JSON
 	var parsed []interface{} //nolint:gofmt
@@ -41,7 +43,8 @@ func TestJSONFormatter_SingleEntry(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be valid JSON
 	var parsed []map[string]interface{} //nolint:gofmt
@@ -114,7 +117,8 @@ func TestJSONFormatter_MultipleEntries(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be valid JSON
 	var parsed []map[string]interface{} //nolint:gofmt
@@ -158,7 +162,8 @@ func TestJSONFormatter_RFC3339Timestamp(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain RFC3339 formatted timestamp
 	if !strings.Contains(result, "2026-02-09T14:30:45Z") {
@@ -200,7 +205,8 @@ func TestJSONFormatter_TimezonePreservation(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	var parsed []map[string]interface{} //nolint:gofmt
 	_ = json.Unmarshal([]byte(result), &parsed)
@@ -226,7 +232,8 @@ func TestJSONFormatter_EmptyArrays(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	var parsed []map[string]interface{} //nolint:gofmt
 	_ = json.Unmarshal([]byte(result), &parsed)
@@ -265,7 +272,8 @@ func TestJSONFormatter_SpecialCharacters(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be valid JSON (properly escaped)
 	var parsed []map[string]interface{} //nolint:gofmt
@@ -302,7 +310,8 @@ func TestJSONFormatter_Indentation(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be indented (contain newlines and spaces for readability)
 	if !strings.Contains(result, "\n") {
@@ -328,7 +337,8 @@ func TestJSONFormatter_UTF8Characters(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should be valid JSON
 	var parsed []map[string]interface{} //nolint:gofmt

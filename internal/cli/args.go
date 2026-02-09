@@ -5,26 +5,30 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 // SearchArgs contains parsed search arguments
 type SearchArgs struct {
-	Tags     []string
-	Mentions []string
-	Keywords []string
-	FromDate *time.Time
-	ToDate   *time.Time
-	Limit    int
-	Offset   int
-	Format   string // "full", "summary", "json"
-	Reverse  bool
+	Tags      []string
+	Mentions  []string
+	Keywords  []string
+	FromDate  *time.Time
+	ToDate    *time.Time
+	Limit     int
+	Offset    int
+	Format    string // "full", "summary", "json"
+	Reverse   bool
+	ColorMode color.Mode // Color mode: auto, always, never
 }
 
 // parseSearchArgs parses command-line arguments into SearchArgs
 func parseSearchArgs(args []string) (SearchArgs, error) {
 	result := SearchArgs{
-		Format: "full", // Default format
-		Limit:  0,      // No limit by default
+		Format:    "full",     // Default format
+		Limit:     0,          // No limit by default
+		ColorMode: color.Auto, // Default color mode
 	}
 
 	for i := 0; i < len(args); i++ {
@@ -130,6 +134,17 @@ func parseFlag(flag string, args []string, index int, result *SearchArgs) (int, 
 
 	case "-r", "--reverse":
 		result.Reverse = true
+
+	case "--color":
+		index++
+		if index >= len(args) {
+			return index, fmt.Errorf("--color requires an argument: auto, always, never")
+		}
+		mode, err := color.ParseMode(args[index])
+		if err != nil {
+			return index, err
+		}
+		result.ColorMode = mode
 
 	default:
 		return index, unknownFlagError(flag)

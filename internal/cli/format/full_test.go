@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 func TestFullFormatter_Empty(t *testing.T) {
 	formatter := &FullFormatter{}
 	var entries []*internal.JournalEntry
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	expected := "Found 0 entries.\n"
 	if result != expected {
@@ -34,7 +36,8 @@ func TestFullFormatter_SingleEntry(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain header
 	if !strings.Contains(result, "Found 1 entries:") {
@@ -82,7 +85,8 @@ func TestFullFormatter_MultipleEntries(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain header with count
 	if !strings.Contains(result, "Found 3 entries:") {
@@ -120,7 +124,8 @@ func TestFullFormatter_MultilineBody(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should preserve multiline formatting
 	if !strings.Contains(result, body) {
@@ -144,7 +149,8 @@ func TestFullFormatter_TimezonePreservation(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain timezone abbreviation in formatted timestamp
 	if !strings.Contains(result, "PST") {
@@ -165,7 +171,8 @@ func TestFullFormatter_SpecialCharacters(t *testing.T) {
 		},
 	}
 
-	result := formatter.Format(entries)
+	colorizer := color.New(color.Never)
+	result := formatter.Format(entries, colorizer)
 
 	// Should contain the special characters as-is
 	if !strings.Contains(result, "Testing \"quotes\" and 'apostrophes' and <brackets> and &ampersands.") {

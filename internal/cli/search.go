@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/jashort/jrnlg/internal"
+	"github.com/jashort/jrnlg/internal/cli/color"
 	"github.com/jashort/jrnlg/internal/cli/format"
 )
 
@@ -79,9 +80,12 @@ func (a *App) Search(args []string) error {
 		})
 	}
 
+	// Create colorizer based on color mode
+	colorizer := color.New(searchArgs.ColorMode)
+
 	// Format and display results
 	formatter := format.GetFormatter(searchArgs.Format)
-	output := formatter.Format(finalResults)
+	output := formatter.Format(finalResults, colorizer)
 	fmt.Print(output)
 
 	return nil
