@@ -283,6 +283,73 @@ func TestParseSearchArgs_Errors(t *testing.T) {
 	}
 }
 
+// Test improved error messages with suggestions
+func TestParseSearchArgs_ErrorMessages(t *testing.T) {
+	testCases := []struct {
+		name          string
+		args          []string
+		errorContains string
+	}{
+		{
+			name:          "typo in help flag",
+			args:          []string{"--halp"},
+			errorContains: "-h", // Short form is primary
+		},
+		{
+			name:          "typo in summary flag",
+			args:          []string{"--sumary"},
+			errorContains: "--summary",
+		},
+		{
+			name:          "typo in format flag",
+			args:          []string{"--frmat", "json"},
+			errorContains: "--format",
+		},
+		{
+			name:          "invalid format with suggestion",
+			args:          []string{"--format", "xml"},
+			errorContains: "must be full, summary, or json",
+		},
+		{
+			name:          "missing date with example",
+			args:          []string{"-from"},
+			errorContains: "Example:",
+		},
+		{
+			name:          "invalid number with quote",
+			args:          []string{"-n", "abc"},
+			errorContains: "\"abc\"",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parseSearchArgs(tc.args)
+			if err == nil {
+				t.Fatalf("Expected error for args %v, got none", tc.args)
+			}
+			if !containsString(err.Error(), tc.errorContains) {
+				t.Errorf("Expected error to contain %q, got: %v", tc.errorContains, err)
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains a substring (case-insensitive)
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && indexOfSubstring(s, substr) >= 0))
+}
+
+func indexOfSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestParseSearchArgs_EmptyTagAndMention(t *testing.T) {
 	// Tags and mentions with just # or @ should be ignored
 	args, err := parseSearchArgs([]string{"#", "@", "#work"})

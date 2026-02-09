@@ -35,12 +35,15 @@ func (a *App) Run(args []string) error {
 		return a.CreateEntry()
 	}
 
-	// Handle --help, --version flags
-	if args[0] == "--help" || args[0] == "-h" {
-		return a.ShowHelp()
-	}
-	if args[0] == "--version" || args[0] == "-v" {
-		return a.ShowVersion()
+	// Pre-scan for global flags (--help, --version) anywhere in args
+	// This allows: ./jrnlg list -from today --help
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return a.ShowHelp()
+		}
+		if arg == "--version" || arg == "-v" {
+			return a.ShowVersion()
+		}
 	}
 
 	// Handle explicit commands
