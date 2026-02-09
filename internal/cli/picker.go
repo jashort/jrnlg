@@ -30,7 +30,7 @@ func PickEntry(entries []*internal.JournalEntry) (*internal.JournalEntry, error)
 		fmt.Printf("%d. %s\n   %s\n\n",
 			i+1,
 			internal.FormatTimestamp(entry.Timestamp),
-			truncateBody(entry.Body, 70))
+			TruncateBody(entry.Body, 70))
 	}
 
 	// Prompt for selection
@@ -61,17 +61,4 @@ func PickEntry(entries []*internal.JournalEntry) (*internal.JournalEntry, error)
 
 	// Return selected entry (convert 1-based to 0-based index)
 	return entries[selection-1], nil
-}
-
-// truncateBody truncates the body text to a maximum length, adding "..." if truncated
-func truncateBody(body string, maxLen int) string {
-	// Get first line only
-	lines := strings.Split(body, "\n")
-	firstLine := strings.TrimSpace(lines[0])
-
-	if len(firstLine) <= maxLen {
-		return firstLine
-	}
-
-	return firstLine[:maxLen] + "..."
 }

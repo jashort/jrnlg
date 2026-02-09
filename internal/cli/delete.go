@@ -28,15 +28,11 @@ func (a *App) DeleteEntries(args []string) error {
 
 	// Find entries to delete
 	var entries []*internal.JournalEntry
+	selector := NewEntrySelector(a.storage)
 
 	if deleteArgs.Timestamp != "" {
 		// Delete specific entry by timestamp
-		timestamp, err := parseTimestamp(deleteArgs.Timestamp)
-		if err != nil {
-			return fmt.Errorf("invalid timestamp format: %w", err)
-		}
-
-		entry, err := a.storage.GetEntry(timestamp)
+		entry, _, err := selector.SelectEntry(deleteArgs.Timestamp)
 		if err != nil {
 			return fmt.Errorf("entry not found: %s", deleteArgs.Timestamp)
 		}
@@ -49,7 +45,7 @@ func (a *App) DeleteEntries(args []string) error {
 			EndDate:   deleteArgs.ToDate,
 		}
 
-		entries, err = a.storage.ListEntries(filter)
+		entries, err = selector.SelectEntries(filter)
 		if err != nil {
 			return fmt.Errorf("failed to list entries: %w", err)
 		}
@@ -177,7 +173,7 @@ func confirmDeletion(entries []*internal.JournalEntry, force bool) (bool, error)
 		fmt.Printf("%d. %s\n   %s\n\n",
 			i+1,
 			internal.FormatTimestamp(entry.Timestamp),
-			truncateBody(entry.Body, 70))
+			TruncateBody(entry.Body, 70))
 	}
 
 	// Skip confirmation if force flag

@@ -20,8 +20,9 @@ func (a *App) EditEntry(args []string) error {
 		selector = args[0]
 	}
 
-	// Find entry to edit
-	entry, filePath, err := a.findEntryToEdit(selector)
+	// Find entry to edit using selector
+	entrySelector := NewEntrySelector(a.storage)
+	entry, filePath, err := entrySelector.SelectEntry(selector)
 	if err != nil {
 		return err
 	}
@@ -70,135 +71,6 @@ func (a *App) EditEntry(args []string) error {
 	fmt.Printf("Timestamp: %s\n", editedEntry.Timestamp.Format("2006-01-02 3:04 PM"))
 
 	return nil
-}
-
-// findEntryToEdit locates the entry to edit based on the selector
-// Returns the entry, its file path, and any error
-func (a *App) findEntryToEdit(selector string) (*internal.JournalEntry, string, error) {
-	// Case 1: No selector → most recent entry
-	if selector == "" {
-		return a.findMostRecentEntry()
-	}
-
-	// Case 2: Timestamp format (YYYY-MM-DD-HH-MM-SS)
-	if isTimestampFormat(selector) {
-		timestamp, err := parseTimestamp(selector)
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid timestamp format: %w", err)
-		}
-
-		entry, err := a.storage.GetEntry(timestamp)
-		if err != nil {
-			return nil, "", fmt.Errorf("entry not found: %s", selector)
-		}
-
-		filePath, err := a.storage.GetEntryPath(timestamp)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get entry path: %w", err)
-		}
-
-		return entry, filePath, nil
-	}
-
-	// Case 3: Natural language date → filter and pick
-	return a.findEntryByDate(selector)
-}
-
-// findMostRecentEntry returns the most recent entry
-func (a *App) findMostRecentEntry() (*internal.JournalEntry, string, error) {
-	// List all entries, limit 1, reverse order (newest first)
-	filter := internal.EntryFilter{
-		Limit: 1,
-	}
-
-	entries, err := a.storage.ListEntries(filter)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to list entries: %w", err)
-	}
-
-	if len(entries) == 0 {
-		return nil, "", fmt.Errorf("no entries found")
-	}
-
-	// Get most recent (entries are sorted oldest first, so get last)
-	entry := entries[len(entries)-1]
-
-	filePath, err := a.storage.GetEntryPath(entry.Timestamp)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get entry path: %w", err)
-	}
-
-	return entry, filePath, nil
-}
-
-// findEntryByDate filters entries by date and picks one (interactive if multiple)
-func (a *App) findEntryByDate(dateStr string) (*internal.JournalEntry, string, error) {
-	// Parse date
-	date, err := ParseDate(dateStr)
-	if err != nil {
-		return nil, "", fmt.Errorf("invalid date: %w", err)
-	}
-
-	// Create filter for the day
-	startDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-	endDate := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999999999, date.Location())
-
-	filter := internal.EntryFilter{
-		StartDate: &startDate,
-		EndDate:   &endDate,
-	}
-
-	// List matching entries
-	entries, err := a.storage.ListEntries(filter)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to list entries: %w", err)
-	}
-
-	if len(entries) == 0 {
-		return nil, "", fmt.Errorf("no entries found for %s", dateStr)
-	}
-
-	// If only one entry, use it
-	if len(entries) == 1 {
-		entry := entries[0]
-		filePath, err := a.storage.GetEntryPath(entry.Timestamp)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to get entry path: %w", err)
-		}
-		return entry, filePath, nil
-	}
-
-	// Multiple entries → interactive picker
-	fmt.Printf("Found %d entries for %s:\n", len(entries), dateStr)
-	entry, err := PickEntry(entries)
-	if err != nil {
-		return nil, "", err
-	}
-
-	filePath, err := a.storage.GetEntryPath(entry.Timestamp)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get entry path: %w", err)
-	}
-
-	return entry, filePath, nil
-}
-
-// isTimestampFormat checks if a string matches the timestamp format YYYY-MM-DD-HH-MM-SS
-func isTimestampFormat(s string) bool {
-	// Simple check: 19 chars, dashes in right places
-	if len(s) != 19 {
-		return false
-	}
-	if s[4] != '-' || s[7] != '-' || s[10] != '-' || s[13] != '-' || s[16] != '-' {
-		return false
-	}
-	return true
-}
-
-// parseTimestamp parses a timestamp string in format YYYY-MM-DD-HH-MM-SS
-func parseTimestamp(s string) (time.Time, error) {
-	// Parse as UTC (same as file naming)
-	return time.Parse("2006-01-02-15-04-05", s)
 }
 
 // validateTimestampUnchanged ensures the timestamp hasn't been modified
