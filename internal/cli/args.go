@@ -60,27 +60,27 @@ func parseSearchArgs(args []string) (SearchArgs, error) {
 // parseFlag handles parsing a single flag and its value (if applicable)
 func parseFlag(flag string, args []string, index int, result *SearchArgs) (int, error) {
 	switch flag {
-	case "-from":
+	case "-from", "--from":
 		index++
 		if index >= len(args) {
-			return index, fmt.Errorf("-from requires a date argument. Example: -from today")
+			return index, fmt.Errorf("%s requires a date argument. Example: --from today", flag)
 		}
 		date, err := ParseDate(args[index])
 		if err != nil {
-			return index, fmt.Errorf("invalid date for -from: %w\n\nExamples: today, yesterday, \"3 days ago\", 2024-01-01", err)
+			return index, fmt.Errorf("invalid date for %s: %w\n\nExamples: today, yesterday, \"3 days ago\", 2024-01-01", flag, err)
 		}
 		// Truncate to start of day (00:00:00) for date comparison
 		date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 		result.FromDate = &date
 
-	case "-to":
+	case "-to", "--to":
 		index++
 		if index >= len(args) {
-			return index, fmt.Errorf("-to requires a date argument. Example: -to today")
+			return index, fmt.Errorf("%s requires a date argument. Example: --to today", flag)
 		}
 		date, err := ParseDate(args[index])
 		if err != nil {
-			return index, fmt.Errorf("invalid date for -to: %w\n\nExamples: today, yesterday, \"3 days ago\", 2024-01-01", err)
+			return index, fmt.Errorf("invalid date for %s: %w\n\nExamples: today, yesterday, \"3 days ago\", 2024-01-01", flag, err)
 		}
 		// Truncate to end of day (23:59:59) for inclusive date comparison
 		date = time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999999999, date.Location())

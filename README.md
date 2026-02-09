@@ -35,7 +35,7 @@ jrnlg list
 
 # Search for entries
 jrnlg search '#work'
-jrnlg list -from yesterday
+jrnlg list --from yesterday
 ```
 
 ## Usage
@@ -93,23 +93,23 @@ jrnlg search deadline
 jrnlg search '#work' '@alice' deadline
 
 # Search with date ranges
-jrnlg search '#work' -from 2024-01-01 -to 2024-12-31
+jrnlg search '#work' --from 2024-01-01 --to 2024-12-31
 ```
 
 ### Natural Language Date Filters
 
 ```bash
 # Entries from yesterday
-jrnlg list -from yesterday
+jrnlg list --from yesterday
 
 # Entries from the last 3 days
-jrnlg list -from "3 days ago"
+jrnlg list --from "3 days ago"
 
 # Entries from last week until yesterday
-jrnlg list -from "1 week ago" -to yesterday
+jrnlg list --from "1 week ago" --to yesterday
 
 # ISO 8601 dates also work
-jrnlg list -from 2024-01-01 -to 2024-12-31
+jrnlg list --from 2024-01-01 --to 2024-12-31
 ```
 
 ### Shell Quoting Important Note
@@ -203,8 +203,8 @@ Options:
   -r                   Reverse order (newest first)
   --summary            Use summary format (one line per entry)
   --format <format>    Output format: full, summary, json (default: full)
-  -from <date>         Start date (ISO 8601 or natural language)
-  -to <date>           End date (ISO 8601 or natural language)
+  --from <date>        Start date (ISO 8601 or natural language)
+  --to <date>          End date (ISO 8601 or natural language)
 ```
 
 ### Search Command
@@ -237,7 +237,7 @@ jrnlg
 # Write: "Completed #work tasks. Meeting with @team was productive."
 
 # Review today's entries
-jrnlg list -from today --summary
+jrnlg list --from today --summary
 ```
 
 ### Project Tracking
@@ -248,7 +248,7 @@ jrnlg
 # Write: "Made progress on #project-alpha. Fixed bug in @authentication module."
 
 # Review all project entries
-jrnlg search '#project-alpha' -from "1 week ago"
+jrnlg search '#project-alpha' --from "1 week ago"
 
 # Find specific person's mentions
 jrnlg search '@alice' '#project-alpha'
@@ -258,10 +258,10 @@ jrnlg search '@alice' '#project-alpha'
 
 ```bash
 # See last week's work
-jrnlg list -from "1 week ago" -to yesterday --summary
+jrnlg list --from "1 week ago" --to yesterday --summary
 
 # Export to JSON for analysis
-jrnlg list -from "1 week ago" --format json > weekly_journal.json
+jrnlg list --from "1 week ago" --format json > weekly_journal.json
 ```
 
 ## Development

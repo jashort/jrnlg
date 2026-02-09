@@ -88,35 +88,61 @@ func TestParseSearchArgs_Mixed(t *testing.T) {
 }
 
 func TestParseSearchArgs_FromDate(t *testing.T) {
-	args, err := parseSearchArgs([]string{"-from", "2026-02-01"})
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+	// Test both -from and --from
+	testCases := []struct {
+		name string
+		flag string
+	}{
+		{"short form", "-from"},
+		{"long form", "--from"},
 	}
 
-	if args.FromDate == nil {
-		t.Fatal("Expected FromDate to be set")
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			args, err := parseSearchArgs([]string{tc.flag, "2026-02-01"})
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
 
-	expected := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	if !args.FromDate.Equal(expected) {
-		t.Errorf("Expected FromDate %v, got %v", expected, args.FromDate)
+			if args.FromDate == nil {
+				t.Fatal("Expected FromDate to be set")
+			}
+
+			expected := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+			if !args.FromDate.Equal(expected) {
+				t.Errorf("Expected FromDate %v, got %v", expected, args.FromDate)
+			}
+		})
 	}
 }
 
 func TestParseSearchArgs_ToDate(t *testing.T) {
-	args, err := parseSearchArgs([]string{"-to", "2026-02-28"})
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
+	// Test both -to and --to
+	testCases := []struct {
+		name string
+		flag string
+	}{
+		{"short form", "-to"},
+		{"long form", "--to"},
 	}
 
-	if args.ToDate == nil {
-		t.Fatal("Expected ToDate to be set")
-	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			args, err := parseSearchArgs([]string{tc.flag, "2026-02-28"})
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
 
-	// -to date is set to end of day (23:59:59.999...) for inclusive filtering
-	expected := time.Date(2026, 2, 28, 23, 59, 59, 999999999, time.UTC)
-	if !args.ToDate.Equal(expected) {
-		t.Errorf("Expected ToDate %v, got %v", expected, args.ToDate)
+			if args.ToDate == nil {
+				t.Fatal("Expected ToDate to be set")
+			}
+
+			// -to date is set to end of day (23:59:59.999...) for inclusive filtering
+			expected := time.Date(2026, 2, 28, 23, 59, 59, 999999999, time.UTC)
+			if !args.ToDate.Equal(expected) {
+				t.Errorf("Expected ToDate %v, got %v", expected, args.ToDate)
+			}
+		})
 	}
 }
 

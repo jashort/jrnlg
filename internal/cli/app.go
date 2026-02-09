@@ -73,8 +73,8 @@ SEARCH TERMS:
     Multiple terms use AND logic (all must match)
 
 FLAGS:
-    -from <date>                    Show entries from this date onwards
-    -to <date>                      Show entries up to this date
+    -from, --from <date>            Show entries from this date onwards
+    -to, --to <date>                Show entries up to this date
     -n, --limit <num>               Limit number of results
     --offset <num>                  Skip first N results
     -r, --reverse                   Show newest entries first
@@ -92,9 +92,9 @@ EXAMPLES:
     jrnlg                           # Create new entry
     jrnlg search '#work'            # Find work entries (note: quotes required)
     jrnlg search '@alice'           # Find entries mentioning Alice
-    jrnlg list -from yesterday      # Recent entries
-    jrnlg list -from "3 days ago" -to today --summary
-    jrnlg search '#work' '@alice' -from 2026-01-01 --summary
+    jrnlg list --from yesterday     # Recent entries
+    jrnlg list --from "3 days ago" --to today --summary
+    jrnlg search '#work' '@alice' --from 2026-01-01 --summary
 
 CONFIGURATION:
     JRNLG_STORAGE_PATH              Storage location (default: ~/.jrnlg/entries)

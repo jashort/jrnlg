@@ -20,8 +20,8 @@ var AllFlags = []FlagDef{
 	{[]string{"-v", "--version"}, "Show version information", false, true},
 
 	// Search/list flags
-	{[]string{"-from"}, "Show entries from this date onwards", true, false},
-	{[]string{"-to"}, "Show entries up to this date", true, false},
+	{[]string{"-from", "--from"}, "Show entries from this date onwards", true, false},
+	{[]string{"-to", "--to"}, "Show entries up to this date", true, false},
 	{[]string{"-n", "--limit"}, "Limit number of results", true, false},
 	{[]string{"--offset"}, "Skip first N results", true, false},
 	{[]string{"-r", "--reverse"}, "Show newest entries first", false, false},
