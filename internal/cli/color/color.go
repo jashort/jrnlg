@@ -115,3 +115,38 @@ func ParseMode(s string) (Mode, error) {
 		return Auto, fmt.Errorf("invalid color mode %q: must be auto, always, or never", s)
 	}
 }
+
+// Default colorizer for convenience functions
+var defaultColorizer = New(Auto)
+
+// Cyan returns text in cyan (for headers)
+func Cyan(s string) string {
+	if !defaultColorizer.enabled {
+		return s
+	}
+	return cyan + s + reset
+}
+
+// Green returns text in green (for numbers/highlights)
+func Green(s string) string {
+	if !defaultColorizer.enabled {
+		return s
+	}
+	return green + s + reset
+}
+
+// Yellow returns text in yellow
+func Yellow(s string) string {
+	if !defaultColorizer.enabled {
+		return s
+	}
+	return yellow + s + reset
+}
+
+// Red returns text in red
+func Red(s string) string {
+	if !defaultColorizer.enabled {
+		return s
+	}
+	return red + s + reset
+}

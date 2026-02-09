@@ -58,6 +58,8 @@ func (a *App) Run(args []string) error {
 		return a.HandleTagsCommand(args[1:])
 	case "mentions":
 		return a.HandleMentionsCommand(args[1:])
+	case "stats":
+		return a.HandleStatsCommand(args[1:])
 	default:
 		// Treat as implicit search (backward compatibility)
 		return a.Search(args)
@@ -76,6 +78,7 @@ USAGE:
     jrnlg delete [selector] [flags] Delete entries
     jrnlg tags [command]            Manage tags
     jrnlg mentions [command]        Manage mentions
+    jrnlg stats [flags]             Show journal statistics
 
 EDIT SELECTORS:
     jrnlg edit                      Edit most recent entry
@@ -102,6 +105,15 @@ MENTION COMMANDS:
     jrnlg mentions rename OLD NEW   Rename mention (case-insensitive)
     jrnlg mentions rename OLD NEW --dry-run    Preview changes
     jrnlg mentions rename OLD NEW --force      Skip confirmation
+
+STATS COMMANDS:
+    jrnlg stats                     Show stats for last 30 days
+    jrnlg stats --all               Show all-time statistics
+    jrnlg stats --from "90 days ago"  Stats from specific date
+    jrnlg stats --tag work          Stats for entries with #work
+    jrnlg stats --mention alice     Stats for entries with @alice
+    jrnlg stats --detailed          Show detailed breakdown
+    jrnlg stats --format json       Output as JSON
 
 SEARCH TERMS:
     #tag                            Find entries with this tag

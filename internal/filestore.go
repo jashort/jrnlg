@@ -453,6 +453,12 @@ func (fs *FileSystemStorage) InvalidateIndex() {
 	fs.index = nil
 }
 
+// GetIndex returns the existing index or builds a new one
+// This is a public wrapper around getOrCreateIndex for use by CLI commands
+func (fs *FileSystemStorage) GetIndex(filter EntryFilter) (*Index, error) {
+	return fs.getOrCreateIndex(filter)
+}
+
 // GetTagStatistics returns tag usage counts across all entries
 // Builds index if needed
 func (fs *FileSystemStorage) GetTagStatistics() (map[string]int, error) {

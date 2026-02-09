@@ -423,3 +423,95 @@ func TestIndex_GetEntriesForMention_CaseInsensitive(t *testing.T) {
 		t.Errorf("Expected 1 entry with @ALICE (case-insensitive), got %d", len(entries))
 	}
 }
+
+func TestIndex_GetEntriesInRange(t *testing.T) {
+	index := createTestIndex(t)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Test exact range that includes both entries
+	startDate := time.Date(2026, 1, 15, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 1, 20, 23, 59, 59, 0, loc)
+
+	entries := index.GetEntriesInRange(startDate, endDate)
+
+	if len(entries) != 2 {
+		t.Errorf("Expected 2 entries in range, got %d", len(entries))
+	}
+}
+
+func TestIndex_GetEntriesInRange_PartialRange(t *testing.T) {
+	index := createTestIndex(t)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Range that only includes first entry (Jan 15)
+	startDate := time.Date(2026, 1, 15, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 1, 19, 23, 59, 59, 0, loc)
+
+	entries := index.GetEntriesInRange(startDate, endDate)
+
+	if len(entries) != 1 {
+		t.Errorf("Expected 1 entry in partial range, got %d", len(entries))
+	}
+
+	if entries[0].Timestamp.Day() != 15 {
+		t.Errorf("Expected entry from Jan 15, got %v", entries[0].Timestamp)
+	}
+}
+
+func TestIndex_GetEntriesInRange_EmptyRange(t *testing.T) {
+	index := createTestIndex(t)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Range with no entries (March has no entries)
+	startDate := time.Date(2026, 3, 1, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 3, 31, 23, 59, 59, 0, loc)
+
+	entries := index.GetEntriesInRange(startDate, endDate)
+
+	if len(entries) != 0 {
+		t.Errorf("Expected 0 entries in empty range, got %d", len(entries))
+	}
+}
+
+func TestIndex_GetEntriesInRange_BoundaryInclusive(t *testing.T) {
+	index := createTestIndex(t)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Range that includes the first entry (Jan 15 at 9:30 AM)
+	// Start at beginning of day, end at end of day
+	startDate := time.Date(2026, 1, 15, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 1, 15, 23, 59, 59, 0, loc)
+
+	entries := index.GetEntriesInRange(startDate, endDate)
+
+	if len(entries) != 1 {
+		t.Errorf("Expected 1 entry in single-day range, got %d", len(entries))
+	}
+
+	if len(entries) > 0 && entries[0].Timestamp.Day() != 15 {
+		t.Errorf("Expected entry from Jan 15, got %v", entries[0].Timestamp)
+	}
+}
+
+func TestIndex_GetAllEntries(t *testing.T) {
+	index := createTestIndex(t)
+
+	entries := index.GetAllEntries()
+
+	if len(entries) != 3 {
+		t.Errorf("Expected 3 entries total, got %d", len(entries))
+	}
+
+	// Verify it's a copy (modifying shouldn't affect index)
+	original := entries[0]
+	entries[0] = nil
+
+	allAgain := index.GetAllEntries()
+	if allAgain[0] != original {
+		t.Errorf("GetAllEntries should return a copy, not original slice")
+	}
+}

@@ -289,3 +289,32 @@ func (idx *Index) GetEntriesForMention(mention string) []*IndexedEntry {
 	normalized := strings.ToLower(mention)
 	return idx.mentionIndex[normalized]
 }
+
+// GetEntriesInRange returns entries within the specified date range (inclusive)
+// startDate and endDate should be normalized to day boundaries (midnight)
+func (idx *Index) GetEntriesInRange(startDate, endDate time.Time) []*IndexedEntry {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	var results []*IndexedEntry
+
+	for _, entry := range idx.entries {
+		// Check if entry timestamp is within range (inclusive)
+		if !entry.Timestamp.Before(startDate) && !entry.Timestamp.After(endDate) {
+			results = append(results, entry)
+		}
+	}
+
+	return results
+}
+
+// GetAllEntries returns all indexed entries
+func (idx *Index) GetAllEntries() []*IndexedEntry {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	// Return a copy to prevent external modification
+	entries := make([]*IndexedEntry, len(idx.entries))
+	copy(entries, idx.entries)
+	return entries
+}
