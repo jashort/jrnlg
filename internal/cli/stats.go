@@ -22,17 +22,6 @@ type statsOptions struct {
 	Detailed bool   // --detailed flag (sets format to "detailed")
 }
 
-// HandleStatsCommand handles the stats command (legacy entry point)
-func (a *App) HandleStatsCommand(args []string) error {
-	// Parse arguments
-	opts, err := a.parseStatsArgs(args)
-	if err != nil {
-		return err
-	}
-
-	return a.executeStats(opts)
-}
-
 // executeStats performs the actual stats logic
 func (a *App) executeStats(opts *statsOptions) error {
 	// Fetch entries based on options
@@ -76,90 +65,6 @@ func (a *App) executeStats(opts *statsOptions) error {
 	}
 
 	return nil
-}
-
-// parseStatsArgs parses command line arguments for stats command
-func (a *App) parseStatsArgs(args []string) (*statsOptions, error) {
-	opts := &statsOptions{
-		Format: "default",
-	}
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-
-		switch arg {
-		case "--all":
-			opts.All = true
-
-		case "--from":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--from requires a date argument")
-			}
-			i++
-			date, err := ParseDate(args[i])
-			if err != nil {
-				return nil, fmt.Errorf("invalid --from date: %w", err)
-			}
-			opts.FromDate = &date
-
-		case "--to":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--to requires a date argument")
-			}
-			i++
-			date, err := ParseDate(args[i])
-			if err != nil {
-				return nil, fmt.Errorf("invalid --to date: %w", err)
-			}
-			opts.ToDate = &date
-
-		case "--tag":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--tag requires a tag argument")
-			}
-			i++
-			opts.Tag = strings.ToLower(strings.TrimPrefix(args[i], "#"))
-
-		case "--mention":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--mention requires a mention argument")
-			}
-			i++
-			opts.Mention = strings.ToLower(strings.TrimPrefix(args[i], "@"))
-
-		case "--format":
-			if i+1 >= len(args) {
-				return nil, fmt.Errorf("--format requires a format argument")
-			}
-			i++
-			format := args[i]
-			if format != "default" && format != "json" && format != "detailed" {
-				return nil, fmt.Errorf("invalid format: %s (must be default, json, or detailed)", format)
-			}
-			opts.Format = format
-
-		case "--detailed":
-			opts.Detailed = true
-
-		default:
-			return nil, fmt.Errorf("unknown flag: %s", arg)
-		}
-	}
-
-	// Validate flag combinations
-	if opts.All && opts.FromDate != nil {
-		return nil, fmt.Errorf("cannot use --all with --from")
-	}
-
-	if opts.All && opts.ToDate != nil {
-		return nil, fmt.Errorf("cannot use --all with --to")
-	}
-
-	if opts.Tag != "" && opts.Mention != "" {
-		return nil, fmt.Errorf("cannot use --tag and --mention together")
-	}
-
-	return opts, nil
 }
 
 // fetchEntriesForStats fetches entries based on options and returns entries, date range, and isAllTime flag

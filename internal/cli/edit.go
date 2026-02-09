@@ -8,17 +8,6 @@ import (
 	"github.com/jashort/jrnlg/internal"
 )
 
-// EditEntry handles the edit command (legacy entry point)
-func (a *App) EditEntry(args []string) error {
-	// Parse selector (first argument)
-	var selector string
-	if len(args) > 0 {
-		selector = args[0]
-	}
-
-	return a.executeEdit(selector)
-}
-
 // executeEdit performs the actual edit logic
 func (a *App) executeEdit(selector string) error {
 	// Find entry to edit using selector

@@ -11,78 +11,6 @@ import (
 	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
-// HandleTagsCommand routes the tags subcommands (legacy entry point)
-func (a *App) HandleTagsCommand(args []string) error {
-	if len(args) == 0 {
-		// Default: list tags
-		return a.listTags(false)
-	}
-
-	subcommand := args[0]
-	switch subcommand {
-	case "list":
-		// Parse orphaned flag
-		orphaned := false
-		for _, arg := range args[1:] {
-			if arg == "--orphaned" {
-				orphaned = true
-			}
-		}
-		return a.listTags(orphaned)
-	case "rename":
-		return a.renameTagsLegacy(args[1:])
-	default:
-		// If first arg doesn't look like a flag, treat it as unknown subcommand
-		if !strings.HasPrefix(subcommand, "-") {
-			return fmt.Errorf("unknown subcommand: %s\nUsage: jrnlg tags [list|rename] [options]", subcommand)
-		}
-		// Otherwise treat as flags for list command
-		orphaned := false
-		for _, arg := range args {
-			if arg == "--orphaned" {
-				orphaned = true
-			}
-		}
-		return a.listTags(orphaned)
-	}
-}
-
-// HandleMentionsCommand routes the mentions subcommands (legacy entry point)
-func (a *App) HandleMentionsCommand(args []string) error {
-	if len(args) == 0 {
-		// Default: list mentions
-		return a.listMentions(false)
-	}
-
-	subcommand := args[0]
-	switch subcommand {
-	case "list":
-		// Parse orphaned flag
-		orphaned := false
-		for _, arg := range args[1:] {
-			if arg == "--orphaned" {
-				orphaned = true
-			}
-		}
-		return a.listMentions(orphaned)
-	case "rename":
-		return a.renameMentionsLegacy(args[1:])
-	default:
-		// If first arg doesn't look like a flag, treat it as unknown subcommand
-		if !strings.HasPrefix(subcommand, "-") {
-			return fmt.Errorf("unknown subcommand: %s\nUsage: jrnlg mentions [list|rename] [options]", subcommand)
-		}
-		// Otherwise treat as flags for list command
-		orphaned := false
-		for _, arg := range args {
-			if arg == "--orphaned" {
-				orphaned = true
-			}
-		}
-		return a.listMentions(orphaned)
-	}
-}
-
 // listMentions displays all mentions with their counts
 func (a *App) listMentions(orphanedOnly bool) error {
 	// Get statistics
@@ -270,16 +198,6 @@ func (a *App) renameTags(oldName, newName string, dryRun, force bool) error {
 	return nil
 }
 
-// renameTagsLegacy handles the tag rename subcommand (legacy args-based signature)
-func (a *App) renameTagsLegacy(args []string) error {
-	// Parse args: OLD NEW [--dry-run] [--force]
-	tagArgs, err := parseRenameArgs(args)
-	if err != nil {
-		return err
-	}
-	return a.renameTags(tagArgs.OldName, tagArgs.NewName, tagArgs.DryRun, tagArgs.Force)
-}
-
 // renameMentions handles the mention rename subcommand (Kong-compatible signature)
 func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error {
 	// Validate mention formats
@@ -377,55 +295,11 @@ func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error 
 	return nil
 }
 
-// renameMentionsLegacy handles the mention rename subcommand (legacy args-based signature)
-func (a *App) renameMentionsLegacy(args []string) error {
-	// Parse args: OLD NEW [--dry-run] [--force]
-	mentionArgs, err := parseRenameArgs(args)
-	if err != nil {
-		return err
-	}
-	return a.renameMentions(mentionArgs.OldName, mentionArgs.NewName, mentionArgs.DryRun, mentionArgs.Force)
-}
-
 // Helper types and functions
-
-type renameArgs struct {
-	OldName string
-	NewName string
-	DryRun  bool
-	Force   bool
-}
 
 type statItem struct {
 	name  string
 	count int
-}
-
-func parseRenameArgs(args []string) (*renameArgs, error) {
-	result := &renameArgs{}
-
-	// Extract non-flag arguments
-	var positional []string
-	for _, arg := range args {
-		if arg == "--dry-run" {
-			result.DryRun = true
-		} else if arg == "--force" {
-			result.Force = true
-		} else if !strings.HasPrefix(arg, "-") {
-			positional = append(positional, arg)
-		} else {
-			return nil, fmt.Errorf("unknown flag: %s", arg)
-		}
-	}
-
-	if len(positional) != 2 {
-		return nil, fmt.Errorf("usage: jrnlg tags rename OLD NEW [--dry-run] [--force]")
-	}
-
-	result.OldName = positional[0]
-	result.NewName = positional[1]
-
-	return result, nil
 }
 
 func sortStatisticsAlpha(stats map[string]int) []statItem {

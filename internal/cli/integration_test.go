@@ -85,7 +85,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 1: List all entries
 	t.Run("list all", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{})
+			return app.executeSearch(SearchArgs{})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -99,7 +99,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 2: Search by tag
 	t.Run("search by tag #work", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"#work"})
+			return app.executeSearch(SearchArgs{Tags: []string{"work"}})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -113,7 +113,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 3: Search by mention
 	t.Run("search by mention @alice", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"@alice"})
+			return app.executeSearch(SearchArgs{Mentions: []string{"alice"}})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -127,7 +127,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 4: Search with AND logic
 	t.Run("search #work AND @alice", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"#work", "@alice"})
+			return app.executeSearch(SearchArgs{Tags: []string{"work"}, Mentions: []string{"alice"}})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -140,8 +140,9 @@ func TestSearchIntegration(t *testing.T) {
 
 	// Test 5: Search with date filter
 	t.Run("search with date filter", func(t *testing.T) {
+		fromDate := time.Date(2026, 2, 9, 0, 0, 0, 0, time.UTC)
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"-from", "2026-02-09"})
+			return app.executeSearch(SearchArgs{FromDate: &fromDate})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -155,7 +156,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 6: Search with limit
 	t.Run("search with limit", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"-n", "2"})
+			return app.executeSearch(SearchArgs{Limit: 2})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -169,7 +170,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 7: Search with summary format
 	t.Run("search with summary format", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"--summary"})
+			return app.executeSearch(SearchArgs{Format: "summary"})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -187,7 +188,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 8: Search with JSON format
 	t.Run("search with json format", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"--format", "json"})
+			return app.executeSearch(SearchArgs{Format: "json"})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -208,7 +209,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 9: Search with reverse order
 	t.Run("search with reverse order", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"-r"})
+			return app.executeSearch(SearchArgs{Reverse: true})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)
@@ -229,7 +230,7 @@ func TestSearchIntegration(t *testing.T) {
 	// Test 10: Search with keyword
 	t.Run("search by keyword", func(t *testing.T) {
 		output, err := captureOutput(func() error {
-			return app.Search([]string{"demo"})
+			return app.executeSearch(SearchArgs{Keywords: []string{"demo"}})
 		})
 		if err != nil {
 			t.Fatalf("Search failed: %v", err)

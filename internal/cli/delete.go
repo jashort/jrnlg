@@ -10,25 +10,6 @@ import (
 	"github.com/jashort/jrnlg/internal"
 )
 
-// DeleteArgs contains parsed delete arguments
-type DeleteArgs struct {
-	Timestamp string     // Specific entry timestamp (YYYY-MM-DD-HH-MM-SS)
-	FromDate  *time.Time // Filter: start date
-	ToDate    *time.Time // Filter: end date
-	Force     bool       // Skip confirmation
-}
-
-// DeleteEntries handles the delete command (legacy entry point)
-func (a *App) DeleteEntries(args []string) error {
-	// Parse arguments
-	deleteArgs, err := parseDeleteArgs(args)
-	if err != nil {
-		return err
-	}
-
-	return a.executeDelete(deleteArgs.Timestamp, deleteArgs.FromDate, deleteArgs.ToDate, deleteArgs.Force)
-}
-
 // executeDelete performs the actual deletion logic
 func (a *App) executeDelete(selector string, fromDate, toDate *time.Time, force bool) error {
 	// Find entries to delete
@@ -112,58 +93,6 @@ func (a *App) executeDelete(selector string, fromDate, toDate *time.Time, force 
 	}
 
 	return nil
-}
-
-// parseDeleteArgs parses command-line arguments for delete command
-func parseDeleteArgs(args []string) (DeleteArgs, error) {
-	result := DeleteArgs{}
-
-	// First argument (if not a flag) is the timestamp
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		result.Timestamp = args[0]
-		args = args[1:] // Remove timestamp from args
-	}
-
-	// Parse flags
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-
-		switch arg {
-		case "-from", "--from":
-			i++
-			if i >= len(args) {
-				return result, fmt.Errorf("%s requires a date argument", arg)
-			}
-			date, err := ParseDate(args[i])
-			if err != nil {
-				return result, fmt.Errorf("invalid date for %s: %w", arg, err)
-			}
-			// Truncate to start of day
-			date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-			result.FromDate = &date
-
-		case "-to", "--to":
-			i++
-			if i >= len(args) {
-				return result, fmt.Errorf("%s requires a date argument", arg)
-			}
-			date, err := ParseDate(args[i])
-			if err != nil {
-				return result, fmt.Errorf("invalid date for %s: %w", arg, err)
-			}
-			// Truncate to end of day
-			date = time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 999999999, date.Location())
-			result.ToDate = &date
-
-		case "--force", "-f":
-			result.Force = true
-
-		default:
-			return result, fmt.Errorf("unknown flag: %s", arg)
-		}
-	}
-
-	return result, nil
 }
 
 // confirmDeletion shows preview and asks for confirmation unless force is true

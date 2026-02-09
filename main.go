@@ -3,16 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/alecthomas/kong"
 
 	"github.com/jashort/jrnlg/internal"
 	"github.com/jashort/jrnlg/internal/cli"
-)
-
-// Version information (set via ldflags during build)
-var (
-	version = "dev"
 )
 
 func main() {
@@ -28,20 +24,11 @@ func main() {
 
 	// Create CLI app
 	app := cli.NewApp(storage, config)
-	app.SetVersion(version)
 
 	// Handle no-args case: default to create command
 	args := os.Args[1:]
 	if len(args) == 0 {
 		args = []string{"create"}
-	}
-
-	// Handle version flag early (before Kong parsing)
-	for _, arg := range args {
-		if arg == "--version" || arg == "-v" {
-			_ = app.ShowVersion()
-			return
-		}
 	}
 
 	// Parse CLI with Kong
@@ -53,6 +40,9 @@ func main() {
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
 		}),
+		kong.Vars{
+			"version": buildVersionString(),
+		},
 	)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -75,4 +65,17 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func buildVersionString() string {
+	var build, commitTime string
+	if info, ok := debug.ReadBuildInfo(); ok {
+		build = info.Main.Version
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.time" {
+				commitTime = setting.Value
+			}
+		}
+	}
+	return fmt.Sprintf("jrnlg %s (Commit Timestamp: %s)", build, commitTime)
 }

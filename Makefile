@@ -2,13 +2,9 @@
 
 # Variables
 BINARY_NAME=jrnlg
-VERSION?=0.1.0
 BUILD_DIR=build
 INSTALL_PATH=/usr/local/bin
 GO=go
-
-# Linker flags to inject version information
-LDFLAGS=-ldflags "-X main.version=$(VERSION)"
 
 all: build ## Build the binary
 
@@ -20,17 +16,17 @@ help: ## Show this help message
 
 build: ## Build the binary
 	@echo "Building $(BINARY_NAME)..."
-	$(GO) build $(LDFLAGS) -o $(BINARY_NAME) .
+	$(GO) build -o $(BINARY_NAME) .
 	@echo "Build complete: $(BINARY_NAME)"
 
 build-all: ## Build for multiple platforms
 	@echo "Building for multiple platforms..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 .
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
-	GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 .
-	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 .
-	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe .
+	GOOS=linux GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 .
+	GOOS=linux GOARCH=arm64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 .
+	GOOS=darwin GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 .
+	GOOS=darwin GOARCH=arm64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 .
+	GOOS=windows GOARCH=amd64 $(GO) build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe .
 	@echo "Multi-platform build complete in $(BUILD_DIR)/"
 
 test: ## Run all tests

@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alecthomas/kong"
+
 	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
 // CLI defines the command-line interface structure
 type CLI struct {
 	// Global flags
-	Color   string `enum:"auto,always,never" default:"auto" help:"Color mode"`
-	Version bool   `short:"v" help:"Show version"`
+	Color   string           `enum:"auto,always,never" default:"auto" help:"Color mode"`
+	Version kong.VersionFlag `short:"v" help:"Show version"`
 
 	// Commands
 	Create   CreateCmd   `cmd:"" help:"Create new journal entry"`
