@@ -125,29 +125,15 @@ func extractTags(text string) ([]string, error) {
 		if len(match) > 1 {
 			fullTag := match[1]
 
-			// Split on hyphens to create multiple tags
-			// e.g., "machine-learning" becomes ["machine", "learning"]
-			words := strings.Split(fullTag, "-")
-			for _, word := range words {
-				// Skip empty strings from consecutive hyphens
-				if word == "" {
-					continue
-				}
+			// Normalize to lowercase
+			tag := strings.ToLower(fullTag)
 
-				tag := strings.ToLower(word)
-
-				// Validate length
-				if len(tag) > MaxTagLength {
-					return nil, fmt.Errorf("tag exceeds maximum length of %d characters: %s", MaxTagLength, tag)
-				}
-
-				// Validate tag starts with a letter (after splitting)
-				if len(tag) > 0 && (tag[0] < 'a' || tag[0] > 'z') {
-					continue // Skip tags that don't start with a letter after splitting
-				}
-
-				tagMap[tag] = true
+			// Validate length
+			if len(tag) > MaxTagLength {
+				return nil, fmt.Errorf("tag exceeds maximum length of %d characters: %s", MaxTagLength, tag)
 			}
+
+			tagMap[tag] = true
 		}
 	}
 

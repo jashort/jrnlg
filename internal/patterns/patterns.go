@@ -6,7 +6,7 @@ import "regexp"
 
 var (
 	// Tag matches: #letter followed by alphanumeric/underscore/hyphen
-	// Hyphens will be split later to create multiple tags
+	// Hyphens are preserved as part of the tag
 	// Example: #work, #machine-learning, #project_alpha
 	Tag = regexp.MustCompile(`#([a-zA-Z][a-zA-Z0-9_-]*)`)
 

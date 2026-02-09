@@ -84,13 +84,13 @@ Working on #my_project with @john_doe and @jane_smith.
 			wantMinute:      45,
 		},
 		{
-			name: "hyphenated tags create multiple entries",
+			name: "hyphenated tags are single tags",
 			input: `
 ## Thursday 2026-02-12 9:00 AM MST
 
 Topics: #machine-learning and #data-science.
 `,
-			wantTags:        []string{"data", "learning", "machine", "science"},
+			wantTags:        []string{"data-science", "machine-learning"},
 			wantMentions:    []string{},
 			wantBodyContain: "Topics:",
 			wantYear:        2026,
