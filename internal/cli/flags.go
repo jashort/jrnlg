@@ -141,7 +141,7 @@ func levenshteinDistance(s1, s2 string) int {
 			if s1[i-1] != s2[j-1] {
 				cost = 1
 			}
-			matrix[i][j] = min(
+			matrix[i][j] = minInts(
 				matrix[i-1][j]+1,      // deletion
 				matrix[i][j-1]+1,      // insertion
 				matrix[i-1][j-1]+cost, // substitution
@@ -152,16 +152,12 @@ func levenshteinDistance(s1, s2 string) int {
 	return matrix[len(s1)][len(s2)]
 }
 
-// min returns the minimum of three integers
-func min(a, b, c int) int {
-	if a < b {
-		if a < c {
-			return a
+func minInts(is ...int) int {
+	m := is[0]
+	for _, i := range is[1:] {
+		if i < m {
+			m = i
 		}
-		return c
 	}
-	if b < c {
-		return b
-	}
-	return c
+	return m
 }

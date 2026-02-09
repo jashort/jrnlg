@@ -310,6 +310,7 @@ func TestParseSearchArgs_Errors(t *testing.T) {
 }
 
 // Test improved error messages with suggestions
+// nolint:misspell
 func TestParseSearchArgs_ErrorMessages(t *testing.T) {
 	testCases := []struct {
 		name          string

@@ -64,17 +64,6 @@ func TestParseEditorArgs(t *testing.T) {
 }
 
 func TestLoadConfig_EditorArgs(t *testing.T) {
-	// Save original env var
-	originalArgs := ""
-	if val, exists := lookupEnv("JRNLG_EDITOR_ARGS"); exists {
-		originalArgs = val
-	}
-	defer func() {
-		if originalArgs != "" {
-			t.Setenv("JRNLG_EDITOR_ARGS", originalArgs)
-		}
-	}()
-
 	// Test with editor args set
 	t.Setenv("JRNLG_EDITOR_ARGS", "+startinsert '+call cursor(3,1)'")
 	config, err := LoadConfig()
@@ -97,13 +86,7 @@ func TestLoadConfig_NoEditorArgs(t *testing.T) {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
 
-	if config.EditorArgs != nil && len(config.EditorArgs) > 0 {
+	if len(config.EditorArgs) > 0 {
 		t.Errorf("EditorArgs should be empty, got %v", config.EditorArgs)
 	}
-}
-
-// lookupEnv is a helper to check if env var exists
-func lookupEnv(key string) (string, bool) {
-	// This will be replaced by t.Setenv in tests
-	return "", false
 }

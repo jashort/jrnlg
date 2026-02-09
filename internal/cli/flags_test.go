@@ -27,7 +27,7 @@ func TestIsKnownFlag(t *testing.T) {
 		{"summary", "--summary", true},
 		{"format", "--format", true},
 		{"unknown", "--unknown", false},
-		{"typo", "--halp", false},
+		{"typo", "--halp", false}, //nolint:misspell
 	}
 
 	for _, tc := range testCases {
@@ -98,6 +98,7 @@ func TestGetFlagHelp(t *testing.T) {
 	}
 }
 
+//nolint:misspell
 func TestFindSimilarFlags(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -129,6 +130,7 @@ func TestFindSimilarFlags(t *testing.T) {
 	}
 }
 
+//nolint:misspell
 func TestUnknownFlagError(t *testing.T) {
 	testCases := []struct {
 		name          string
@@ -168,6 +170,7 @@ func TestUnknownFlagError(t *testing.T) {
 	}
 }
 
+//nolint:misspell
 func TestLevenshteinDistance(t *testing.T) {
 	testCases := []struct {
 		s1       string
