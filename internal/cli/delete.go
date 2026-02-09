@@ -18,7 +18,7 @@ type DeleteArgs struct {
 	Force     bool       // Skip confirmation
 }
 
-// DeleteEntries handles the delete command
+// DeleteEntries handles the delete command (legacy entry point)
 func (a *App) DeleteEntries(args []string) error {
 	// Parse arguments
 	deleteArgs, err := parseDeleteArgs(args)
@@ -26,26 +26,32 @@ func (a *App) DeleteEntries(args []string) error {
 		return err
 	}
 
+	return a.executeDelete(deleteArgs.Timestamp, deleteArgs.FromDate, deleteArgs.ToDate, deleteArgs.Force)
+}
+
+// executeDelete performs the actual deletion logic
+func (a *App) executeDelete(selector string, fromDate, toDate *time.Time, force bool) error {
 	// Find entries to delete
 	var entries []*internal.JournalEntry
-	selector := NewEntrySelector(a.storage)
+	entrySelector := NewEntrySelector(a.storage)
 
-	if deleteArgs.Timestamp != "" {
+	if selector != "" {
 		// Delete specific entry by timestamp
-		entry, _, err := selector.SelectEntry(deleteArgs.Timestamp)
+		entry, _, err := entrySelector.SelectEntry(selector)
 		if err != nil {
-			return fmt.Errorf("entry not found: %s", deleteArgs.Timestamp)
+			return fmt.Errorf("entry not found: %s", selector)
 		}
 
 		entries = []*internal.JournalEntry{entry}
 	} else {
 		// Delete by filter
 		filter := internal.EntryFilter{
-			StartDate: deleteArgs.FromDate,
-			EndDate:   deleteArgs.ToDate,
+			StartDate: fromDate,
+			EndDate:   toDate,
 		}
 
-		entries, err = selector.SelectEntries(filter)
+		var err error
+		entries, err = entrySelector.SelectEntries(filter)
 		if err != nil {
 			return fmt.Errorf("failed to list entries: %w", err)
 		}
@@ -57,7 +63,7 @@ func (a *App) DeleteEntries(args []string) error {
 	}
 
 	// Preview and confirm deletion
-	confirmed, err := confirmDeletion(entries, deleteArgs.Force)
+	confirmed, err := confirmDeletion(entries, force)
 	if err != nil {
 		return err
 	}

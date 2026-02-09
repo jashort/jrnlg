@@ -8,11 +8,7 @@ import (
 	"github.com/jashort/jrnlg/internal"
 )
 
-// EditEntry handles the edit command
-// Selector can be:
-// - Empty string: edit most recent entry
-// - Timestamp (YYYY-MM-DD-HH-MM-SS): edit specific entry
-// - Natural language date (yesterday, last week, etc.): filter and pick
+// EditEntry handles the edit command (legacy entry point)
 func (a *App) EditEntry(args []string) error {
 	// Parse selector (first argument)
 	var selector string
@@ -20,6 +16,11 @@ func (a *App) EditEntry(args []string) error {
 		selector = args[0]
 	}
 
+	return a.executeEdit(selector)
+}
+
+// executeEdit performs the actual edit logic
+func (a *App) executeEdit(selector string) error {
 	// Find entry to edit using selector
 	entrySelector := NewEntrySelector(a.storage)
 	entry, filePath, err := entrySelector.SelectEntry(selector)

@@ -22,7 +22,7 @@ type statsOptions struct {
 	Detailed bool   // --detailed flag (sets format to "detailed")
 }
 
-// HandleStatsCommand handles the stats command
+// HandleStatsCommand handles the stats command (legacy entry point)
 func (a *App) HandleStatsCommand(args []string) error {
 	// Parse arguments
 	opts, err := a.parseStatsArgs(args)
@@ -30,11 +30,11 @@ func (a *App) HandleStatsCommand(args []string) error {
 		return err
 	}
 
-	// Apply detailed flag
-	if opts.Detailed {
-		opts.Format = "detailed"
-	}
+	return a.executeStats(opts)
+}
 
+// executeStats performs the actual stats logic
+func (a *App) executeStats(opts *statsOptions) error {
 	// Fetch entries based on options
 	entries, startDate, endDate, isAllTime, err := a.fetchEntriesForStats(opts)
 	if err != nil {

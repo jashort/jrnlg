@@ -11,115 +11,80 @@ import (
 	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
-// HandleTagsCommand routes the tags subcommands
+// HandleTagsCommand routes the tags subcommands (legacy entry point)
 func (a *App) HandleTagsCommand(args []string) error {
 	if len(args) == 0 {
 		// Default: list tags
-		return a.listTags([]string{})
+		return a.listTags(false)
 	}
 
 	subcommand := args[0]
 	switch subcommand {
 	case "list":
-		return a.listTags(args[1:])
+		// Parse orphaned flag
+		orphaned := false
+		for _, arg := range args[1:] {
+			if arg == "--orphaned" {
+				orphaned = true
+			}
+		}
+		return a.listTags(orphaned)
 	case "rename":
-		return a.renameTags(args[1:])
+		return a.renameTagsLegacy(args[1:])
 	default:
 		// If first arg doesn't look like a flag, treat it as unknown subcommand
 		if !strings.HasPrefix(subcommand, "-") {
 			return fmt.Errorf("unknown subcommand: %s\nUsage: jrnlg tags [list|rename] [options]", subcommand)
 		}
 		// Otherwise treat as flags for list command
-		return a.listTags(args)
+		orphaned := false
+		for _, arg := range args {
+			if arg == "--orphaned" {
+				orphaned = true
+			}
+		}
+		return a.listTags(orphaned)
 	}
 }
 
-// HandleMentionsCommand routes the mentions subcommands
+// HandleMentionsCommand routes the mentions subcommands (legacy entry point)
 func (a *App) HandleMentionsCommand(args []string) error {
 	if len(args) == 0 {
 		// Default: list mentions
-		return a.listMentions([]string{})
+		return a.listMentions(false)
 	}
 
 	subcommand := args[0]
 	switch subcommand {
 	case "list":
-		return a.listMentions(args[1:])
+		// Parse orphaned flag
+		orphaned := false
+		for _, arg := range args[1:] {
+			if arg == "--orphaned" {
+				orphaned = true
+			}
+		}
+		return a.listMentions(orphaned)
 	case "rename":
-		return a.renameMentions(args[1:])
+		return a.renameMentionsLegacy(args[1:])
 	default:
 		// If first arg doesn't look like a flag, treat it as unknown subcommand
 		if !strings.HasPrefix(subcommand, "-") {
 			return fmt.Errorf("unknown subcommand: %s\nUsage: jrnlg mentions [list|rename] [options]", subcommand)
 		}
 		// Otherwise treat as flags for list command
-		return a.listMentions(args)
-	}
-}
-
-// listTags displays all tags with their counts
-func (a *App) listTags(args []string) error {
-	// Parse flags
-	orphanedOnly := false
-	for _, arg := range args {
-		if arg == "--orphaned" {
-			orphanedOnly = true
-		}
-	}
-
-	// Get statistics
-	stats, err := a.storage.GetTagStatistics()
-	if err != nil {
-		return fmt.Errorf("failed to get tag statistics: %w", err)
-	}
-
-	if len(stats) == 0 {
-		fmt.Println("No tags found.")
-		return nil
-	}
-
-	// Filter orphaned if requested
-	if orphanedOnly {
-		filtered := make(map[string]int)
-		for tag, count := range stats {
-			if count == 1 {
-				filtered[tag] = count
+		orphaned := false
+		for _, arg := range args {
+			if arg == "--orphaned" {
+				orphaned = true
 			}
 		}
-		stats = filtered
-
-		if len(stats) == 0 {
-			fmt.Println("No orphaned tags found.")
-			return nil
-		}
+		return a.listMentions(orphaned)
 	}
-
-	// Sort alphabetically
-	sorted := sortStatisticsAlpha(stats)
-
-	// Format output
-	colorizer := color.New(color.Auto)
-	for _, item := range sorted {
-		fmt.Printf("%s (%d %s)\n",
-			colorizer.Tag("#"+item.name),
-			item.count,
-			plural("entry", item.count),
-		)
-	}
-
-	return nil
 }
 
 // listMentions displays all mentions with their counts
-func (a *App) listMentions(args []string) error {
-	// Parse flags
-	orphanedOnly := false
-	for _, arg := range args {
-		if arg == "--orphaned" {
-			orphanedOnly = true
-		}
-	}
-
+func (a *App) listMentions(orphanedOnly bool) error {
 	// Get statistics
 	stats, err := a.storage.GetMentionStatistics()
 	if err != nil {
@@ -163,38 +128,77 @@ func (a *App) listMentions(args []string) error {
 	return nil
 }
 
-// renameTags handles the tag rename subcommand
-func (a *App) renameTags(args []string) error {
-	// Parse args: OLD NEW [--dry-run] [--force]
-	tagArgs, err := parseRenameArgs(args)
+// listTags displays all tags with their counts
+func (a *App) listTags(orphanedOnly bool) error {
+	// Get statistics
+	stats, err := a.storage.GetTagStatistics()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get tag statistics: %w", err)
 	}
 
+	if len(stats) == 0 {
+		fmt.Println("No tags found.")
+		return nil
+	}
+
+	// Filter orphaned if requested
+	if orphanedOnly {
+		filtered := make(map[string]int)
+		for tag, count := range stats {
+			if count == 1 {
+				filtered[tag] = count
+			}
+		}
+		stats = filtered
+
+		if len(stats) == 0 {
+			fmt.Println("No orphaned tags found.")
+			return nil
+		}
+	}
+
+	// Sort alphabetically
+	sorted := sortStatisticsAlpha(stats)
+
+	// Format output
+	colorizer := color.New(color.Auto)
+	for _, item := range sorted {
+		fmt.Printf("%s (%d %s)\n",
+			colorizer.Tag("#"+item.name),
+			item.count,
+			plural("entry", item.count),
+		)
+	}
+
+	return nil
+}
+
+// renameTags handles the tag rename subcommand (Kong-compatible signature)
+func (a *App) renameTags(oldName, newName string, dryRun, force bool) error {
 	// Validate tag formats
-	if err := validateTagName(tagArgs.OldName); err != nil {
+	if err := validateTagName(oldName); err != nil {
 		return fmt.Errorf("invalid old tag: %w", err)
 	}
-	if err := validateTagName(tagArgs.NewName); err != nil {
+	if err := validateTagName(newName); err != nil {
 		return fmt.Errorf("invalid new tag: %w", err)
 	}
 
 	// Check if old tag exists
-	filePaths, err := a.storage.GetEntriesWithTag(tagArgs.OldName)
+	filePaths, err := a.storage.GetEntriesWithTag(oldName)
 	if err != nil {
 		return err
 	}
 
 	if len(filePaths) == 0 {
-		fmt.Printf("No entries found with #%s\n", tagArgs.OldName)
+		fmt.Printf("No entries found with #%s\n", oldName)
 		return nil
 	}
 
 	// Check if new tag already exists (WARN - merging will occur)
-	existingNew, _ := a.storage.GetEntriesWithTag(tagArgs.NewName)
+	existingNew, _ := a.storage.GetEntriesWithTag(newName)
 	if len(existingNew) > 0 {
 		fmt.Printf("⚠ Warning: #%s already exists in %d %s (tags will be merged)\n\n",
-			tagArgs.NewName,
+			newName,
 			len(existingNew),
 			plural("entry", len(existingNew)),
 		)
@@ -204,10 +208,10 @@ func (a *App) renameTags(args []string) error {
 	fmt.Printf("Found %d %s with #%s:\n\n",
 		len(filePaths),
 		plural("entry", len(filePaths)),
-		tagArgs.OldName,
+		oldName,
 	)
 
-	if !tagArgs.Force && !tagArgs.DryRun {
+	if !force && !dryRun {
 		showPreview(filePaths, 5)
 		if len(filePaths) > 5 {
 			fmt.Printf("... and %d more\n\n", len(filePaths)-5)
@@ -215,10 +219,10 @@ func (a *App) renameTags(args []string) error {
 	}
 
 	// Dry run
-	if tagArgs.DryRun {
+	if dryRun {
 		fmt.Printf("Would rename #%s to #%s in %d %s\n",
-			tagArgs.OldName,
-			tagArgs.NewName,
+			oldName,
+			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
 		)
@@ -226,10 +230,10 @@ func (a *App) renameTags(args []string) error {
 	}
 
 	// Confirmation
-	if !tagArgs.Force {
+	if !force {
 		fmt.Printf("Rename #%s to #%s in %d %s? (y/N): ",
-			tagArgs.OldName,
-			tagArgs.NewName,
+			oldName,
+			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
 		)
@@ -249,8 +253,8 @@ func (a *App) renameTags(args []string) error {
 	}
 
 	updated, err := a.storage.ReplaceTagInEntries(
-		tagArgs.OldName,
-		tagArgs.NewName,
+		oldName,
+		newName,
 		false,
 	)
 	if err != nil {
@@ -266,38 +270,42 @@ func (a *App) renameTags(args []string) error {
 	return nil
 }
 
-// renameMentions handles the mention rename subcommand
-func (a *App) renameMentions(args []string) error {
+// renameTagsLegacy handles the tag rename subcommand (legacy args-based signature)
+func (a *App) renameTagsLegacy(args []string) error {
 	// Parse args: OLD NEW [--dry-run] [--force]
-	mentionArgs, err := parseRenameArgs(args)
+	tagArgs, err := parseRenameArgs(args)
 	if err != nil {
 		return err
 	}
+	return a.renameTags(tagArgs.OldName, tagArgs.NewName, tagArgs.DryRun, tagArgs.Force)
+}
 
+// renameMentions handles the mention rename subcommand (Kong-compatible signature)
+func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error {
 	// Validate mention formats
-	if err := validateMentionName(mentionArgs.OldName); err != nil {
+	if err := validateMentionName(oldName); err != nil {
 		return fmt.Errorf("invalid old mention: %w", err)
 	}
-	if err := validateMentionName(mentionArgs.NewName); err != nil {
+	if err := validateMentionName(newName); err != nil {
 		return fmt.Errorf("invalid new mention: %w", err)
 	}
 
 	// Check if old mention exists
-	filePaths, err := a.storage.GetEntriesWithMention(mentionArgs.OldName)
+	filePaths, err := a.storage.GetEntriesWithMention(oldName)
 	if err != nil {
 		return err
 	}
 
 	if len(filePaths) == 0 {
-		fmt.Printf("No entries found with @%s\n", mentionArgs.OldName)
+		fmt.Printf("No entries found with @%s\n", oldName)
 		return nil
 	}
 
 	// Check if new mention already exists (WARN - merging will occur)
-	existingNew, _ := a.storage.GetEntriesWithMention(mentionArgs.NewName)
+	existingNew, _ := a.storage.GetEntriesWithMention(newName)
 	if len(existingNew) > 0 {
 		fmt.Printf("⚠ Warning: @%s already exists in %d %s (mentions will be merged)\n\n",
-			mentionArgs.NewName,
+			newName,
 			len(existingNew),
 			plural("entry", len(existingNew)),
 		)
@@ -307,10 +315,10 @@ func (a *App) renameMentions(args []string) error {
 	fmt.Printf("Found %d %s with @%s:\n\n",
 		len(filePaths),
 		plural("entry", len(filePaths)),
-		mentionArgs.OldName,
+		oldName,
 	)
 
-	if !mentionArgs.Force && !mentionArgs.DryRun {
+	if !force && !dryRun {
 		showPreview(filePaths, 5)
 		if len(filePaths) > 5 {
 			fmt.Printf("... and %d more\n\n", len(filePaths)-5)
@@ -318,10 +326,10 @@ func (a *App) renameMentions(args []string) error {
 	}
 
 	// Dry run
-	if mentionArgs.DryRun {
+	if dryRun {
 		fmt.Printf("Would rename @%s to @%s in %d %s\n",
-			mentionArgs.OldName,
-			mentionArgs.NewName,
+			oldName,
+			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
 		)
@@ -329,10 +337,10 @@ func (a *App) renameMentions(args []string) error {
 	}
 
 	// Confirmation
-	if !mentionArgs.Force {
+	if !force {
 		fmt.Printf("Rename @%s to @%s in %d %s? (y/N): ",
-			mentionArgs.OldName,
-			mentionArgs.NewName,
+			oldName,
+			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
 		)
@@ -352,8 +360,8 @@ func (a *App) renameMentions(args []string) error {
 	}
 
 	updated, err := a.storage.ReplaceMentionInEntries(
-		mentionArgs.OldName,
-		mentionArgs.NewName,
+		oldName,
+		newName,
 		false,
 	)
 	if err != nil {
@@ -367,6 +375,16 @@ func (a *App) renameMentions(args []string) error {
 	)
 
 	return nil
+}
+
+// renameMentionsLegacy handles the mention rename subcommand (legacy args-based signature)
+func (a *App) renameMentionsLegacy(args []string) error {
+	// Parse args: OLD NEW [--dry-run] [--force]
+	mentionArgs, err := parseRenameArgs(args)
+	if err != nil {
+		return err
+	}
+	return a.renameMentions(mentionArgs.OldName, mentionArgs.NewName, mentionArgs.DryRun, mentionArgs.Force)
 }
 
 // Helper types and functions

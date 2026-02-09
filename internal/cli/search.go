@@ -9,7 +9,7 @@ import (
 	"github.com/jashort/jrnlg/internal/cli/format"
 )
 
-// Search executes a search query and displays results
+// Search executes a search query and displays results (legacy entry point)
 func (a *App) Search(args []string) error {
 	// Parse search arguments
 	searchArgs, err := parseSearchArgs(args)
@@ -17,6 +17,11 @@ func (a *App) Search(args []string) error {
 		return err
 	}
 
+	return a.executeSearch(searchArgs)
+}
+
+// executeSearch performs the actual search logic
+func (a *App) executeSearch(searchArgs SearchArgs) error {
 	// Build entry filter for date ranges and pagination
 	filter := internal.EntryFilter{
 		Limit:  searchArgs.Limit,
