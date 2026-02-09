@@ -16,8 +16,8 @@ func (a *App) CreateEntry() error {
 	header := internal.FormatTimestamp(timestamp)
 	template := fmt.Sprintf("## %s\n\n", header)
 
-	// 2. Open editor
-	content, err := OpenEditor(template)
+	// 2. Open editor with configured arguments
+	content, err := OpenEditor(template, a.config.EditorArgs)
 	if err != nil {
 		return fmt.Errorf("cannot open editor: %w", err)
 	}

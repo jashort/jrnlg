@@ -7,7 +7,8 @@ import (
 )
 
 // OpenEditor opens an editor with the given initial content and returns the edited content
-func OpenEditor(initialContent string) (string, error) {
+// editorArgs are additional arguments to pass to the editor (e.g., ["+startinsert", "+call cursor(3,1)"])
+func OpenEditor(initialContent string, editorArgs []string) (string, error) {
 	// 1. Get editor command
 	editor := getEditorCommand()
 
@@ -30,8 +31,10 @@ func OpenEditor(initialContent string) (string, error) {
 		return "", err
 	}
 
-	// 4. Launch editor
-	cmd := exec.Command(editor, tmpPath)
+	// 4. Launch editor with additional arguments
+	// Build args: editorArgs + tmpPath
+	args := append(editorArgs, tmpPath)
+	cmd := exec.Command(editor, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

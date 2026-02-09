@@ -7,7 +7,7 @@ A fast, minimal CLI journal application written in Go. Inspired by [jrnl](https:
 - **Natural Language Dates**: Search using "yesterday", "3 days ago", "last week"
 - **Rich Metadata**: Automatic extraction of #tags, @mentions, and timestamps
 - **Multiple Output Formats**: Full, summary, or JSON output
-- **Timezone Aware**: Preserves original timezone while using UTC for storage
+- **Timezone Aware**: Preserves original timezone abbreviation (PST, EST, etc.) in entry content
 - **Search**: Filter by tags, mentions, keywords, and date ranges
 - **Editor Integration**: Uses your preferred editor (VISUAL/EDITOR environment variables)
 
@@ -52,7 +52,7 @@ Write your entry in Markdown format. Tags (`#work`, `#personal`) and mentions (`
 
 **Example Entry:**
 ```markdown
-## Monday 2024-02-09 2:30 PM UTC
+## Monday 2024-02-09 2:30 PM PST
 
 Had a productive meeting with @alice about the #project deadline. 
 Need to focus on #development this week.
@@ -127,6 +127,42 @@ jrnlg search #work      # ❌ Wrong - # treated as comment
 
 - `JRNLG_STORAGE_PATH` - Storage location (default: `~/.jrnlg/entries`)
 - `VISUAL` or `EDITOR` - Editor to use (default: vim → vi → nano)
+- `JRNLG_EDITOR_ARGS` - Additional arguments passed to the editor (optional)
+
+### Editor Configuration
+
+You can customize how your editor opens by setting `JRNLG_EDITOR_ARGS`. Arguments are passed to the editor before the filename.
+
+**Vim/Neovim Examples:**
+```bash
+# Start in insert mode
+export JRNLG_EDITOR_ARGS="+startinsert"
+
+# Start at line 3 in insert mode
+export JRNLG_EDITOR_ARGS="+startinsert +call cursor(3,1)"
+
+# Start at end of file
+export JRNLG_EDITOR_ARGS="+normal G"
+```
+
+**VSCode Example:**
+```bash
+# Wait for file to close before continuing
+export EDITOR="code"
+export JRNLG_EDITOR_ARGS="--wait"
+```
+
+**Emacs Example:**
+```bash
+# Open in terminal mode
+export EDITOR="emacs"
+export JRNLG_EDITOR_ARGS="-nw"
+```
+
+**Note:** Arguments with spaces should be quoted:
+```bash
+export JRNLG_EDITOR_ARGS='"+startinsert" "+call cursor(3,1)"'
+```
 
 ### Storage Format
 

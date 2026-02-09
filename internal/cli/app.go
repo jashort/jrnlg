@@ -95,6 +95,7 @@ EXAMPLES:
 
 CONFIGURATION:
     JRNLG_STORAGE_PATH              Storage location (default: ~/.jrnlg/entries)
+    JRNLG_EDITOR_ARGS               Additional arguments for editor (e.g., "+startinsert")
     VISUAL, EDITOR                  Editor to use (default: vim)
 
 For more information: https://github.com/jashort/jrnlg
