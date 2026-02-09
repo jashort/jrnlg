@@ -6,6 +6,7 @@ A fast, minimal CLI journal application written in Go. Inspired by [jrnl](https:
 - **Fast & Simple**: One Markdown file per entry, no database required
 - **Natural Language Dates**: Search using "yesterday", "3 days ago", "last week"
 - **Rich Metadata**: Automatic extraction of #tags, @mentions, and timestamps
+- **Edit & Delete**: Edit existing entries or delete by date range with confirmation
 - **Colorized Output**: Beautiful syntax highlighting for timestamps, tags, and mentions with smart terminal detection
 - **Multiple Output Formats**: Full, summary, or JSON output
 - **Timezone Aware**: Preserves original timezone abbreviation (PST, EST, etc.) in entry content
@@ -77,6 +78,43 @@ jrnlg list -n 10
 # Show newest entries first
 jrnlg list -r
 ```
+
+### Editing Entries
+
+```bash
+# Edit the most recent entry
+jrnlg edit
+
+# Edit a specific entry by timestamp (from filename)
+jrnlg edit 2024-02-09-14-30-00
+
+# Edit an entry from yesterday
+# (shows picker if multiple entries found)
+jrnlg edit yesterday
+
+# Edit from a specific date
+jrnlg edit "3 days ago"
+```
+
+**Note:** Timestamps cannot be changed during editing to maintain data integrity.
+
+### Deleting Entries
+
+```bash
+# Delete a specific entry (with confirmation)
+jrnlg delete 2024-02-09-14-30-00
+
+# Delete entries from a date range (with confirmation)
+jrnlg delete --from yesterday --to today
+
+# Delete without confirmation prompt
+jrnlg delete 2024-02-09-14-30-00 --force
+
+# Delete all entries from last week
+jrnlg delete --from "1 week ago" --to yesterday
+```
+
+**Warning:** Deletion is permanent and cannot be undone.
 
 ### Searching Entries
 
@@ -220,6 +258,44 @@ Entries are stored as individual Markdown files:
 --version, -v    Show version information
 ```
 
+### Create Command
+
+```
+jrnlg
+
+Opens your editor to create a new journal entry.
+```
+
+### Edit Command
+
+```
+jrnlg edit [selector]
+
+Selectors:
+  (none)                      Edit most recent entry
+  YYYY-MM-DD-HH-MM-SS         Edit specific entry by timestamp
+  yesterday, "3 days ago"     Edit entry from date (picker if multiple)
+
+Note: Timestamps cannot be changed during editing.
+```
+
+### Delete Command
+
+```
+jrnlg delete [selector] [options]
+
+Selectors:
+  YYYY-MM-DD-HH-MM-SS         Delete specific entry
+  --from <date> --to <date>   Delete entries in date range
+
+Options:
+  -f, --force                 Skip confirmation prompt
+  --from <date>               Start date
+  --to <date>                 End date
+
+Warning: Deletion is permanent and cannot be undone.
+```
+
 ### List Command
 
 ```
@@ -291,6 +367,12 @@ jrnlg list --from "1 week ago" --to yesterday --summary
 
 # Export to JSON for analysis
 jrnlg list --from "1 week ago" --format json > weekly_journal.json
+
+# Edit yesterday's entry
+jrnlg edit yesterday
+
+# Delete old test entries
+jrnlg delete --from "1 month ago" --to "2 weeks ago" --force
 ```
 
 ## Development

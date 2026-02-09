@@ -980,3 +980,382 @@ func containsTag(tags []string, target string) bool {
 	}
 	return false
 }
+
+func TestInvalidateIndex(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create and save an entry
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{"work"},
+		Mentions:  []string{},
+		Body:      "Test entry. #work",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Build index by performing a search
+	filter := EntryFilter{}
+	_, err := storage.SearchByTags([]string{"work"}, filter)
+	if err != nil {
+		t.Fatalf("SearchByTags() error = %v", err)
+	}
+
+	// Verify index exists
+	if storage.index == nil {
+		t.Fatal("Index should be built after search")
+	}
+
+	// Invalidate index
+	storage.InvalidateIndex()
+
+	// Verify index is cleared
+	if storage.index != nil {
+		t.Error("Index should be nil after InvalidateIndex()")
+	}
+}
+
+func TestGetEntryPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Save entry
+	entry := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "Test entry.",
+	}
+	err := storage.SaveEntry(entry)
+	if err != nil {
+		t.Fatalf("SaveEntry() error = %v", err)
+	}
+
+	// Get path
+	path, err := storage.GetEntryPath(timestamp)
+	if err != nil {
+		t.Fatalf("GetEntryPath() error = %v", err)
+	}
+
+	// Verify path exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Errorf("GetEntryPath() returned non-existent path: %s", path)
+	}
+
+	// Verify path format (should be UTC)
+	expectedPath := filepath.Join(tmpDir, "2026", "02", "2026-02-08-16-31-00.md")
+	if path != expectedPath {
+		t.Errorf("GetEntryPath() = %s, want %s", path, expectedPath)
+	}
+}
+
+func TestGetEntryPath_WithCollision(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Save two entries with same timestamp
+	entry1 := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "First entry.",
+	}
+	entry2 := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "Second entry.",
+	}
+
+	_ = storage.SaveEntry(entry1)
+	_ = storage.SaveEntry(entry2)
+
+	// GetEntryPath should return base path (first entry)
+	path, err := storage.GetEntryPath(timestamp)
+	if err != nil {
+		t.Fatalf("GetEntryPath() error = %v", err)
+	}
+
+	expectedBasePath := filepath.Join(tmpDir, "2026", "02", "2026-02-08-16-31-00.md")
+	if path != expectedBasePath {
+		t.Errorf("GetEntryPath() = %s, want %s", path, expectedBasePath)
+	}
+}
+
+func TestGetEntryPath_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Try to get path for non-existent entry
+	_, err := storage.GetEntryPath(timestamp)
+	if err == nil {
+		t.Error("Expected error for non-existent entry, got nil")
+	}
+}
+
+func TestUpdateEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Create and save original entry
+	original := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{"work"},
+		Mentions:  []string{"alice"},
+		Body:      "Original content with @Alice about #work.",
+	}
+	err := storage.SaveEntry(original)
+	if err != nil {
+		t.Fatalf("SaveEntry() error = %v", err)
+	}
+
+	// Get entry path
+	path, err := storage.GetEntryPath(timestamp)
+	if err != nil {
+		t.Fatalf("GetEntryPath() error = %v", err)
+	}
+
+	// Update entry
+	updated := &JournalEntry{
+		Timestamp: timestamp, // Same timestamp
+		Tags:      []string{"personal", "updated"},
+		Mentions:  []string{"bob"},
+		Body:      "Updated content with @Bob about #personal and #updated.",
+	}
+	err = storage.UpdateEntry(path, updated)
+	if err != nil {
+		t.Fatalf("UpdateEntry() error = %v", err)
+	}
+
+	// Retrieve and verify updated content
+	retrieved, err := storage.GetEntry(timestamp)
+	if err != nil {
+		t.Fatalf("GetEntry() error = %v", err)
+	}
+
+	if retrieved.Body != updated.Body {
+		t.Errorf("Body = %q, want %q", retrieved.Body, updated.Body)
+	}
+
+	// Verify file still exists at same path
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Error("File should still exist at original path")
+	}
+}
+
+func TestUpdateEntry_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Try to update non-existent entry
+	entry := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "Updated content.",
+	}
+
+	fakePath := filepath.Join(tmpDir, "2026", "02", "2026-02-08-16-31-00.md")
+	err := storage.UpdateEntry(fakePath, entry)
+	if err == nil {
+		t.Error("Expected error for non-existent entry, got nil")
+	}
+}
+
+func TestDeleteEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(2026, 2, 8, 8, 31, 0, 0, loc)
+
+	// Create and save entry
+	entry := &JournalEntry{
+		Timestamp: timestamp,
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "Entry to be deleted.",
+	}
+	err := storage.SaveEntry(entry)
+	if err != nil {
+		t.Fatalf("SaveEntry() error = %v", err)
+	}
+
+	// Get entry path
+	path, err := storage.GetEntryPath(timestamp)
+	if err != nil {
+		t.Fatalf("GetEntryPath() error = %v", err)
+	}
+
+	// Verify file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatal("File should exist before deletion")
+	}
+
+	// Delete entry
+	err = storage.DeleteEntry(path)
+	if err != nil {
+		t.Fatalf("DeleteEntry() error = %v", err)
+	}
+
+	// Verify file no longer exists
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("File should not exist after deletion")
+	}
+
+	// Verify GetEntry fails
+	_, err = storage.GetEntry(timestamp)
+	if err == nil {
+		t.Error("GetEntry() should fail after deletion")
+	}
+}
+
+func TestDeleteEntry_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	// Try to delete non-existent entry
+	fakePath := filepath.Join(tmpDir, "2026", "02", "2026-02-08-16-31-00.md")
+	err := storage.DeleteEntry(fakePath)
+	if err == nil {
+		t.Error("Expected error for non-existent entry, got nil")
+	}
+}
+
+func TestDeleteEntries(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create multiple entries
+	entries := []*JournalEntry{
+		{
+			Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{},
+			Body:      "January entry.",
+		},
+		{
+			Timestamp: time.Date(2026, 2, 5, 8, 31, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{},
+			Body:      "February entry 1.",
+		},
+		{
+			Timestamp: time.Date(2026, 2, 20, 14, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{},
+			Body:      "February entry 2.",
+		},
+		{
+			Timestamp: time.Date(2026, 3, 10, 10, 0, 0, 0, loc),
+			Tags:      []string{},
+			Mentions:  []string{},
+			Body:      "March entry.",
+		},
+	}
+
+	for _, entry := range entries {
+		_ = storage.SaveEntry(entry)
+	}
+
+	// Delete February entries
+	startDate := time.Date(2026, 2, 1, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 2, 28, 23, 59, 59, 0, loc)
+	filter := EntryFilter{
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	}
+
+	deleted, err := storage.DeleteEntries(filter)
+	if err != nil {
+		t.Fatalf("DeleteEntries() error = %v", err)
+	}
+
+	// Should delete 2 entries
+	if len(deleted) != 2 {
+		t.Errorf("DeleteEntries() deleted %d entries, want 2", len(deleted))
+	}
+
+	// Verify remaining entries
+	allFilter := EntryFilter{}
+	remaining, err := storage.ListEntries(allFilter)
+	if err != nil {
+		t.Fatalf("ListEntries() error = %v", err)
+	}
+
+	if len(remaining) != 2 {
+		t.Errorf("ListEntries() returned %d entries, want 2", len(remaining))
+	}
+
+	// Verify January and March entries remain
+	if len(remaining) >= 1 && remaining[0].Body != "January entry." {
+		t.Errorf("First remaining entry body = %q, want %q", remaining[0].Body, "January entry.")
+	}
+	if len(remaining) >= 2 && remaining[1].Body != "March entry." {
+		t.Errorf("Second remaining entry body = %q, want %q", remaining[1].Body, "March entry.")
+	}
+}
+
+func TestDeleteEntries_Empty(t *testing.T) {
+	tmpDir := t.TempDir()
+	storage := NewFileSystemStorage(tmpDir, nil)
+
+	loc, _ := time.LoadLocation("America/Los_Angeles")
+
+	// Create entries in January
+	entry := &JournalEntry{
+		Timestamp: time.Date(2026, 1, 15, 9, 30, 0, 0, loc),
+		Tags:      []string{},
+		Mentions:  []string{},
+		Body:      "January entry.",
+	}
+	_ = storage.SaveEntry(entry)
+
+	// Try to delete entries in February (none exist)
+	startDate := time.Date(2026, 2, 1, 0, 0, 0, 0, loc)
+	endDate := time.Date(2026, 2, 28, 23, 59, 59, 0, loc)
+	filter := EntryFilter{
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	}
+
+	deleted, err := storage.DeleteEntries(filter)
+	if err != nil {
+		t.Fatalf("DeleteEntries() error = %v", err)
+	}
+
+	// Should delete 0 entries
+	if len(deleted) != 0 {
+		t.Errorf("DeleteEntries() deleted %d entries, want 0", len(deleted))
+	}
+
+	// Verify original entry still exists
+	allFilter := EntryFilter{}
+	remaining, err := storage.ListEntries(allFilter)
+	if err != nil {
+		t.Fatalf("ListEntries() error = %v", err)
+	}
+
+	if len(remaining) != 1 {
+		t.Errorf("ListEntries() returned %d entries, want 1", len(remaining))
+	}
+}

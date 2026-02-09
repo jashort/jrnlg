@@ -444,3 +444,131 @@ func (fs *FileSystemStorage) indexedEntriesToFull(indexed []*IndexedEntry, filte
 
 	return entries[start:end], nil
 }
+
+// InvalidateIndex clears the search index, forcing a rebuild on next search
+func (fs *FileSystemStorage) InvalidateIndex() {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	fs.index = nil
+}
+
+// GetEntryPath returns the file path for an entry by timestamp
+// Handles collision suffixes (-01, -02, etc.)
+func (fs *FileSystemStorage) GetEntryPath(timestamp time.Time) (string, error) {
+	// Build expected file path
+	basePath := fs.buildFilePath(timestamp)
+
+	// Try base path first
+	if _, err := os.Stat(basePath); err == nil {
+		return basePath, nil
+	}
+
+	// Try with collision suffixes (-01, -02, etc.)
+	for i := 1; i < 100; i++ {
+		path := fmt.Sprintf("%s-%02d.md", basePath[:len(basePath)-3], i)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			break
+		}
+	}
+
+	return "", fmt.Errorf("entry not found: %s", timestamp.Format("2006-01-02 15:04:05"))
+}
+
+// UpdateEntry updates an existing entry atomically
+// The entry's timestamp must match the original (timestamp changes not allowed)
+func (fs *FileSystemStorage) UpdateEntry(filePath string, newEntry *JournalEntry) error {
+	// Verify file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("entry not found: %s", filePath)
+	}
+
+	// Serialize new content
+	markdown := SerializeEntry(newEntry)
+
+	// Write atomically (overwrites old file)
+	if err := fs.writeAtomic(filePath, []byte(markdown)); err != nil {
+		return fmt.Errorf("failed to update entry: %w", err)
+	}
+
+	// Invalidate index
+	fs.InvalidateIndex()
+
+	return nil
+}
+
+// DeleteEntry removes a single entry by file path
+func (fs *FileSystemStorage) DeleteEntry(filePath string) error {
+	// Check file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("entry not found: %s", filePath)
+	}
+
+	// Delete file
+	if err := os.Remove(filePath); err != nil {
+		return fmt.Errorf("failed to delete entry: %w", err)
+	}
+
+	// Invalidate index
+	fs.InvalidateIndex()
+
+	return nil
+}
+
+// DeleteEntries removes multiple entries matching the filter
+// Returns list of deleted file paths and any errors encountered
+func (fs *FileSystemStorage) DeleteEntries(filter EntryFilter) ([]string, error) {
+	// Find all matching file paths
+	files, err := fs.findFiles(filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find files: %w", err)
+	}
+
+	if len(files) == 0 {
+		return []string{}, nil
+	}
+
+	// Filter files by timestamp (same logic as ListEntries)
+	var filesToDelete []string
+	for _, filePath := range files {
+		entry, err := fs.parseFile(filePath)
+		if err != nil {
+			// Skip invalid files
+			continue
+		}
+
+		// Apply timestamp filter
+		if !filter.Matches(entry.Timestamp) {
+			continue
+		}
+
+		filesToDelete = append(filesToDelete, filePath)
+	}
+
+	// Delete each file and collect results
+	var deleted []string
+	var errs []error
+
+	for _, filePath := range filesToDelete {
+		if err := os.Remove(filePath); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete %s: %w", filePath, err))
+			continue
+		}
+
+		deleted = append(deleted, filePath)
+	}
+
+	// Invalidate index if any deletions succeeded
+	if len(deleted) > 0 {
+		fs.InvalidateIndex()
+	}
+
+	// Return results
+	if len(errs) > 0 {
+		return deleted, errors.Join(errs...)
+	}
+
+	return deleted, nil
+}

@@ -28,6 +28,9 @@ var AllFlags = []FlagDef{
 	{[]string{"--summary"}, "Show compact summary format", false, false},
 	{[]string{"--format"}, "Output format: full, summary, json", true, false},
 	{[]string{"--color"}, "When to use colors: auto, always, never (default: auto)", true, false},
+
+	// Delete flags
+	{[]string{"-f", "--force"}, "Skip confirmation prompt", false, false},
 }
 
 // isKnownFlag checks if a flag is registered

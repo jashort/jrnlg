@@ -50,6 +50,10 @@ func (a *App) Run(args []string) error {
 	switch args[0] {
 	case "search", "list":
 		return a.Search(args[1:])
+	case "edit":
+		return a.EditEntry(args[1:])
+	case "delete", "rm":
+		return a.DeleteEntries(args[1:])
 	default:
 		// Treat as implicit search (backward compatibility)
 		return a.Search(args)
@@ -64,6 +68,18 @@ USAGE:
     jrnlg                           Create new journal entry
     jrnlg search [terms] [flags]    Search journal entries
     jrnlg list [terms] [flags]      List journal entries (alias for search)
+    jrnlg edit [selector]           Edit an entry
+    jrnlg delete [selector] [flags] Delete entries
+
+EDIT SELECTORS:
+    jrnlg edit                      Edit most recent entry
+    jrnlg edit 2026-02-08-21-32-00  Edit specific entry by timestamp
+    jrnlg edit yesterday            Edit entry from date (picker if multiple)
+
+DELETE SELECTORS:
+    jrnlg delete 2026-02-08-21-32-00       Delete specific entry
+    jrnlg delete --from yesterday          Delete entries from date range
+    jrnlg delete --from yesterday --force  Skip confirmation
 
 SEARCH TERMS:
     #tag                            Find entries with this tag
@@ -80,6 +96,8 @@ FLAGS:
     -r, --reverse                   Show newest entries first
     --summary                       Show compact summary format
     --format <fmt>                  Output format: full, summary, json
+    --color <mode>                  Color mode: auto, always, never
+    -f, --force                     Skip confirmation (delete only)
     -h, --help                      Show this help
     -v, --version                   Show version
 
@@ -90,6 +108,10 @@ DATE FORMATS:
 
 EXAMPLES:
     jrnlg                           # Create new entry
+    jrnlg edit                      # Edit most recent entry
+    jrnlg edit yesterday            # Edit yesterday's entry
+    jrnlg delete 2026-02-08-21-32-00 # Delete specific entry
+    jrnlg delete --from "last week" --to yesterday  # Delete range
     jrnlg search '#work'            # Find work entries (note: quotes required)
     jrnlg search '@alice'           # Find entries mentioning Alice
     jrnlg list --from yesterday     # Recent entries
