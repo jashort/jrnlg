@@ -52,6 +52,62 @@ func (a *App) CreateEntry() error {
 	return nil
 }
 
+// CreateEntryWithMessage creates a journal entry from the provided message text
+func (a *App) CreateEntryWithMessage(message string) error {
+	// 1. Generate timestamp and header
+	timestamp := time.Now()
+	header := internal.FormatTimestamp(timestamp)
+	content := fmt.Sprintf("## %s\n\n%s\n", header, message)
+
+	// 2. Parse entry
+	entry, err := internal.ParseEntry(content)
+	if err != nil {
+		return fmt.Errorf("invalid entry format: %w", err)
+	}
+
+	// 3. Check for timestamp collision and warn user
+	if a.hasCollision(entry.Timestamp) {
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: Another entry exists with timestamp %s\n",
+			entry.Timestamp.Format("2006-01-02 3:04 PM"))
+		_, _ = fmt.Fprintf(os.Stderr, "Saved with collision suffix\n")
+	}
+
+	// 4. Save entry
+	if err := a.storage.SaveEntry(entry); err != nil {
+		return fmt.Errorf("failed to save entry: %w", err)
+	}
+
+	// 5. Confirmation with timestamp, tags, and mentions
+	fmt.Printf("Entry saved successfully.\n")
+	fmt.Printf("Timestamp: %s\n", entry.Timestamp.Format("2006-01-02 3:04 PM"))
+
+	// Show extracted tags if any
+	if len(entry.Tags) > 0 {
+		fmt.Printf("Tags: ")
+		for i, tag := range entry.Tags {
+			if i > 0 {
+				fmt.Printf(", ")
+			}
+			fmt.Printf("#%s", tag)
+		}
+		fmt.Printf("\n")
+	}
+
+	// Show extracted mentions if any
+	if len(entry.Mentions) > 0 {
+		fmt.Printf("Mentions: ")
+		for i, mention := range entry.Mentions {
+			if i > 0 {
+				fmt.Printf(", ")
+			}
+			fmt.Printf("@%s", mention)
+		}
+		fmt.Printf("\n")
+	}
+
+	return nil
+}
+
 // isEmptyEntry checks if the entry has no body text
 func isEmptyEntry(content string) bool {
 	entry, err := internal.ParseEntry(content)

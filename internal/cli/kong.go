@@ -16,7 +16,7 @@ type CLI struct {
 	Version kong.VersionFlag `short:"v" help:"Show version"`
 
 	// Commands
-	Create   CreateCmd   `cmd:"" help:"Create new journal entry"`
+	Add      AddCmd      `cmd:"" aliases:"create" help:"Add new journal entry"`
 	Search   SearchCmd   `cmd:"" help:"Search journal entries"`
 	List     SearchCmd   `cmd:"" hidden:"" help:"Alias for search"`
 	Edit     EditCmd     `cmd:"" help:"Edit an entry"`
@@ -26,8 +26,10 @@ type CLI struct {
 	Stats    StatsCmd    `cmd:"" help:"Show journal statistics"`
 }
 
-// CreateCmd creates a new journal entry
-type CreateCmd struct{}
+// AddCmd creates a new journal entry
+type AddCmd struct {
+	Message []string `arg:"" optional:"" help:"Entry message (opens editor if not provided)"`
+}
 
 // SearchCmd searches journal entries
 type SearchCmd struct {
@@ -105,7 +107,16 @@ type StatsCmd struct {
 
 // Run implementations for each command
 
-func (c *CreateCmd) Run(ctx *Context) error {
+func (c *AddCmd) Run(ctx *Context) error {
+	// If message provided, check if it's all whitespace
+	if len(c.Message) > 0 {
+		msg := strings.Join(c.Message, " ")
+		// If the message is only whitespace, open editor instead
+		if strings.TrimSpace(msg) == "" {
+			return ctx.App.CreateEntry()
+		}
+		return ctx.App.CreateEntryWithMessage(msg)
+	}
 	return ctx.App.CreateEntry()
 }
 

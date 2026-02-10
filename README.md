@@ -45,13 +45,18 @@ jrnlg list --from yesterday
 
 ### Creating Entries
 
-Simply run `jrnlg` to open your editor:
+Create entries by opening your editor or with an inline message:
 
 ```bash
+# Open editor (default)
 jrnlg
+jrnlg add
+
+# Add entry with inline message
+jrnlg add "Had a productive meeting with @alice about the #project deadline"
 ```
 
-Write your entry in Markdown format. Tags (`#work`, `#personal`) and mentions (`@alice`, `@bob`) are automatically extracted.
+When using the editor, write your entry in Markdown format. Tags (`#work`, `#personal`) and mentions (`@alice`, `@bob`) are automatically extracted from both editor entries and inline messages.
 
 **Example Entry:**
 ```markdown
@@ -60,6 +65,8 @@ Write your entry in Markdown format. Tags (`#work`, `#personal`) and mentions (`
 Had a productive meeting with @alice about the #project deadline. 
 Need to focus on #development this week.
 ```
+
+**Note:** When adding entries with inline messages, extracted tags and mentions are displayed in the confirmation output.
 
 ### Listing Entries
 
@@ -204,8 +211,11 @@ jrnlg list --from 2024-01-01 --to 2024-12-31
 When using tags or mentions in bash/zsh, you **must quote them** because `#` starts a comment:
 
 ```bash
-jrnlg search '#work'    # ✅ Correct
-jrnlg search #work      # ❌ Wrong - # treated as comment
+jrnlg search '#work'                # ✅ Correct
+jrnlg search #work                  # ❌ Wrong - # treated as comment
+
+jrnlg add "Meeting about #project"  # ✅ Correct - quotes protect special chars
+jrnlg add Meeting about #project    # ❌ Wrong - # treated as comment
 ```
 
 ## Configuration
@@ -306,12 +316,28 @@ Entries are stored as individual Markdown files:
 --version, -v    Show version information
 ```
 
-### Create Command
+### Add Command
 
 ```
-jrnlg
+jrnlg [add] [<message>]
 
-Opens your editor to create a new journal entry.
+Creates a new journal entry.
+
+Usage:
+  jrnlg                           Opens editor (default behavior)
+  jrnlg add                       Opens editor
+  jrnlg add "message"             Creates entry with inline message
+
+Options:
+  [<message> ...]                 Entry message (opens editor if not provided)
+
+Examples:
+  jrnlg                                       # Opens editor
+  jrnlg add "Quick note about today"         # Inline message
+  jrnlg add "Met with @alice about #project" # With tags and mentions
+
+Note: When using inline messages, tags and mentions are automatically extracted
+and displayed in the confirmation output.
 ```
 
 ### Edit Command
@@ -433,13 +459,15 @@ Note: Rename is case-insensitive and matches all variations.
 ### Daily Journaling
 
 ```bash
-# Morning journal
+# Morning journal (opens editor)
 jrnlg
 # Write: "Starting the day with #planning and coffee ☕"
 
+# Quick note with inline message
+jrnlg add "Completed standup meeting with @team"
+
 # Evening reflection
-jrnlg
-# Write: "Completed #work tasks. Meeting with @team was productive."
+jrnlg add "Completed #work tasks. Meeting with @team was productive."
 
 # Review today's entries
 jrnlg list --from today --summary
@@ -448,9 +476,12 @@ jrnlg list --from today --summary
 ### Project Tracking
 
 ```bash
-# Log project work
+# Log project work (opens editor)
 jrnlg
 # Write: "Made progress on #project-alpha. Fixed bug in @authentication module."
+
+# Quick inline log
+jrnlg add "Deployed #project-alpha to staging environment"
 
 # Review all project entries
 jrnlg search '#project-alpha' --from "1 week ago"

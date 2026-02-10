@@ -25,10 +25,10 @@ func main() {
 	// Create CLI app
 	app := cli.NewApp(storage, config)
 
-	// Handle no-args case: default to create command
+	// Handle no-args case: default to add command
 	args := os.Args[1:]
 	if len(args) == 0 {
-		args = []string{"create"}
+		args = []string{"add"}
 	}
 
 	// Parse CLI with Kong
