@@ -11,7 +11,6 @@ import (
 // Config holds configuration for journal storage
 type Config struct {
 	StoragePath     string       // Path to store journal entries
-	IndexCacheSize  int          // Maximum number of entries to cache in memory
 	ParallelParse   bool         // Enable parallel parsing of entries
 	MaxParseWorkers int          // Maximum number of parallel parsing workers
 	EditorArgs      []string     // Additional arguments to pass to the editor
@@ -48,7 +47,6 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		StoragePath:     filepath.Join(homeDir, ".jrnlg", "entries"),
-		IndexCacheSize:  DefaultIndexCacheSize,
 		ParallelParse:   true,
 		MaxParseWorkers: runtime.NumCPU(),
 		Logger:          logger,

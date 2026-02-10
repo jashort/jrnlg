@@ -21,7 +21,6 @@ func TestSearchIntegration(t *testing.T) {
 		StoragePath:     tempDir,
 		MaxParseWorkers: 4,
 		ParallelParse:   true,
-		IndexCacheSize:  1000,
 	}
 
 	// Create storage
@@ -251,7 +250,6 @@ func TestCreateEntry(t *testing.T) {
 		StoragePath:     tempDir,
 		MaxParseWorkers: 4,
 		ParallelParse:   true,
-		IndexCacheSize:  1000,
 	}
 
 	// Create storage

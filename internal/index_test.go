@@ -54,9 +54,9 @@ func TestIndex_Build(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 
-	// Verify index size
-	if index.Size() != 2 {
-		t.Errorf("Index size = %d, want 2", index.Size())
+	// Verify index size by checking entries map
+	if len(index.entries) != 2 {
+		t.Errorf("Index size = %d, want 2", len(index.entries))
 	}
 
 	// Verify tag index
@@ -215,20 +215,20 @@ func TestIndex_SearchByKeyword_NotFound(t *testing.T) {
 func TestIndex_GetBody(t *testing.T) {
 	index := createTestIndex(t)
 
-	// Get body for first entry
+	// Get body for first entry using bodyMap directly
 	if len(index.entries) == 0 {
 		t.Fatal("Index has no entries")
 	}
 
 	filePath := index.entries[0].FilePath
-	body := index.GetBody(filePath)
+	body := index.bodyMap[filePath]
 
 	if body == "" {
-		t.Error("GetBody() returned empty string")
+		t.Error("Body from bodyMap is empty")
 	}
 
 	if !contains([]string{body}, "Meeting") && !contains([]string{body}, "Lunch") {
-		t.Errorf("GetBody() returned unexpected body: %s", body)
+		t.Errorf("Body returned unexpected content: %s", body)
 	}
 }
 

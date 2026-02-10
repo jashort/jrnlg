@@ -18,7 +18,6 @@ type CLI struct {
 	// Commands
 	Add      AddCmd      `cmd:"" aliases:"create" help:"Add new journal entry"`
 	Search   SearchCmd   `cmd:"" help:"Search journal entries"`
-	List     SearchCmd   `cmd:"" hidden:"" help:"Alias for search"`
 	Edit     EditCmd     `cmd:"" help:"Edit an entry"`
 	Delete   DeleteCmd   `cmd:"" aliases:"rm" help:"Delete entries"`
 	Tags     TagsCmd     `cmd:"" help:"Manage tags"`

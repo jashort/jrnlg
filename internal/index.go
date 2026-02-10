@@ -200,20 +200,6 @@ func (idx *Index) SearchByKeyword(keyword string) []*IndexedEntry {
 	return results
 }
 
-// GetBody retrieves the body text for a given file path
-func (idx *Index) GetBody(filePath string) string {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return idx.bodyMap[filePath]
-}
-
-// Size returns the number of indexed entries
-func (idx *Index) Size() int {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	return len(idx.entries)
-}
-
 // hasAllTags checks if an entry has all the specified tags
 func (idx *Index) hasAllTags(entry *IndexedEntry, tags []string) bool {
 	entryTags := make(map[string]bool)

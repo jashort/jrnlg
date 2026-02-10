@@ -11,76 +11,77 @@ import (
 	"github.com/jashort/jrnlg/internal/cli/color"
 )
 
+// MetadataType represents the type of metadata (tag or mention)
+type MetadataType string
+
+const (
+	MetadataTypeTag     MetadataType = "tag"
+	MetadataTypeMention MetadataType = "mention"
+)
+
+// Symbol returns the symbol prefix for this metadata type (# or @)
+func (m MetadataType) Symbol() string {
+	if m == MetadataTypeTag {
+		return "#"
+	}
+	return "@"
+}
+
+// Name returns the string name of the metadata type
+func (m MetadataType) Name() string {
+	return string(m)
+}
+
+// MaxLength returns the maximum length for this metadata type
+func (m MetadataType) MaxLength() int {
+	if m == MetadataTypeTag {
+		return internal.MaxTagLength
+	}
+	return internal.MaxMentionLength
+}
+
 // listMentions displays all mentions with their counts
 func (a *App) listMentions(orphanedOnly bool) error {
-	// Get statistics
-	stats, err := a.storage.GetMentionStatistics()
-	if err != nil {
-		return fmt.Errorf("failed to get mention statistics: %w", err)
-	}
-
-	if len(stats) == 0 {
-		fmt.Println("No mentions found.")
-		return nil
-	}
-
-	// Filter orphaned if requested
-	if orphanedOnly {
-		filtered := make(map[string]int)
-		for mention, count := range stats {
-			if count == 1 {
-				filtered[mention] = count
-			}
-		}
-		stats = filtered
-
-		if len(stats) == 0 {
-			fmt.Println("No orphaned mentions found.")
-			return nil
-		}
-	}
-
-	// Sort alphabetically
-	sorted := sortStatisticsAlpha(stats)
-
-	// Format output
-	colorizer := color.New(color.Auto)
-	for _, item := range sorted {
-		fmt.Printf("%s (%d %s)\n",
-			colorizer.Mention("@"+item.name),
-			item.count,
-			plural("entry", item.count),
-		)
-	}
-
-	return nil
+	return a.listMetadata(MetadataTypeMention, orphanedOnly)
 }
 
 // listTags displays all tags with their counts
 func (a *App) listTags(orphanedOnly bool) error {
-	// Get statistics
-	stats, err := a.storage.GetTagStatistics()
+	return a.listMetadata(MetadataTypeTag, orphanedOnly)
+}
+
+// listMetadata is the unified function for listing tags or mentions
+func (a *App) listMetadata(metadataType MetadataType, orphanedOnly bool) error {
+	// Get statistics based on type
+	var stats map[string]int
+	var err error
+	if metadataType == MetadataTypeTag {
+		stats, err = a.storage.GetTagStatistics()
+	} else {
+		stats, err = a.storage.GetMentionStatistics()
+	}
+
 	if err != nil {
-		return fmt.Errorf("failed to get tag statistics: %w", err)
+		return fmt.Errorf("failed to get %s statistics: %w", metadataType.Name(), err)
 	}
 
 	if len(stats) == 0 {
-		fmt.Println("No tags found.")
+		fmt.Printf("No %ss found.\n", metadataType.Name())
 		return nil
 	}
 
 	// Filter orphaned if requested
 	if orphanedOnly {
 		filtered := make(map[string]int)
-		for tag, count := range stats {
+		for name, count := range stats {
 			if count == 1 {
-				filtered[tag] = count
+				filtered[name] = count
 			}
 		}
 		stats = filtered
 
 		if len(stats) == 0 {
-			fmt.Println("No orphaned tags found.")
+			fmt.Printf("No orphaned %ss found.\n", metadataType.Name())
 			return nil
 		}
 	}
@@ -91,8 +92,16 @@ func (a *App) listTags(orphanedOnly bool) error {
 	// Format output
 	colorizer := color.New(color.Auto)
 	for _, item := range sorted {
+		// Apply appropriate colorization
+		var displayName string
+		if metadataType == MetadataTypeTag {
+			displayName = colorizer.Tag(metadataType.Symbol() + item.name)
+		} else {
+			displayName = colorizer.Mention(metadataType.Symbol() + item.name)
+		}
+
 		fmt.Printf("%s (%d %s)\n",
-			colorizer.Tag("#"+item.name),
+			displayName,
 			item.count,
 			plural("entry", item.count),
 		)
@@ -103,136 +112,65 @@ func (a *App) listTags(orphanedOnly bool) error {
 
 // renameTags handles the tag rename subcommand (Kong-compatible signature)
 func (a *App) renameTags(oldName, newName string, dryRun, force bool) error {
-	// Validate tag formats
-	if err := validateTagName(oldName); err != nil {
-		return fmt.Errorf("invalid old tag: %w", err)
-	}
-	if err := validateTagName(newName); err != nil {
-		return fmt.Errorf("invalid new tag: %w", err)
-	}
-
-	// Check if old tag exists
-	filePaths, err := a.storage.GetEntriesWithTag(oldName)
-	if err != nil {
-		return err
-	}
-
-	if len(filePaths) == 0 {
-		fmt.Printf("No entries found with #%s\n", oldName)
-		return nil
-	}
-
-	// Check if new tag already exists (WARN - merging will occur)
-	existingNew, _ := a.storage.GetEntriesWithTag(newName)
-	if len(existingNew) > 0 {
-		fmt.Printf("⚠ Warning: #%s already exists in %d %s (tags will be merged)\n\n",
-			newName,
-			len(existingNew),
-			plural("entry", len(existingNew)),
-		)
-	}
-
-	// Show preview (first 5 entries)
-	fmt.Printf("Found %d %s with #%s:\n\n",
-		len(filePaths),
-		plural("entry", len(filePaths)),
-		oldName,
-	)
-
-	if !force && !dryRun {
-		showPreview(filePaths, 5)
-		if len(filePaths) > 5 {
-			fmt.Printf("... and %d more\n\n", len(filePaths)-5)
-		}
-	}
-
-	// Dry run
-	if dryRun {
-		fmt.Printf("Would rename #%s to #%s in %d %s\n",
-			oldName,
-			newName,
-			len(filePaths),
-			plural("entry", len(filePaths)),
-		)
-		return nil
-	}
-
-	// Confirmation
-	if !force {
-		fmt.Printf("Rename #%s to #%s in %d %s? (y/N): ",
-			oldName,
-			newName,
-			len(filePaths),
-			plural("entry", len(filePaths)),
-		)
-
-		if !promptYes() {
-			fmt.Println("Canceled")
-			return nil
-		}
-	}
-
-	// Execute with progress message
-	if len(filePaths) > 1 {
-		fmt.Printf("Updating %d %s...\n",
-			len(filePaths),
-			plural("entry", len(filePaths)),
-		)
-	}
-
-	updated, err := a.storage.ReplaceTagInEntries(
-		oldName,
-		newName,
-		false,
-	)
-	if err != nil {
-		return fmt.Errorf("rename failed: %w", err)
-	}
-
-	// Success message
-	fmt.Printf("✓ Updated %d %s\n",
-		len(updated),
-		plural("entry", len(updated)),
-	)
-
-	return nil
+	return a.renameMetadata(oldName, newName, MetadataTypeTag, dryRun, force)
 }
 
 // renameMentions handles the mention rename subcommand (Kong-compatible signature)
 func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error {
-	// Validate mention formats
-	if err := validateMentionName(oldName); err != nil {
-		return fmt.Errorf("invalid old mention: %w", err)
+	return a.renameMetadata(oldName, newName, MetadataTypeMention, dryRun, force)
+}
+
+// renameMetadata is the unified function for renaming tags or mentions
+func (a *App) renameMetadata(oldName, newName string, metadataType MetadataType, dryRun, force bool) error {
+	// Validate formats
+	if err := validateMetadataName(oldName, metadataType); err != nil {
+		return fmt.Errorf("invalid old %s: %w", metadataType.Name(), err)
 	}
-	if err := validateMentionName(newName); err != nil {
-		return fmt.Errorf("invalid new mention: %w", err)
+	if err := validateMetadataName(newName, metadataType); err != nil {
+		return fmt.Errorf("invalid new %s: %w", metadataType.Name(), err)
 	}
 
-	// Check if old mention exists
-	filePaths, err := a.storage.GetEntriesWithMention(oldName)
+	// Get entries based on type
+	var filePaths []string
+	var err error
+	if metadataType == MetadataTypeTag {
+		filePaths, err = a.storage.GetEntriesWithTag(oldName)
+	} else {
+		filePaths, err = a.storage.GetEntriesWithMention(oldName)
+	}
+
 	if err != nil {
 		return err
 	}
 
 	if len(filePaths) == 0 {
-		fmt.Printf("No entries found with @%s\n", oldName)
+		fmt.Printf("No entries found with %s%s\n", metadataType.Symbol(), oldName)
 		return nil
 	}
 
-	// Check if new mention already exists (WARN - merging will occur)
-	existingNew, _ := a.storage.GetEntriesWithMention(newName)
+	// Check if new name already exists (WARN - merging will occur)
+	var existingNew []string
+	if metadataType == MetadataTypeTag {
+		existingNew, _ = a.storage.GetEntriesWithTag(newName)
+	} else {
+		existingNew, _ = a.storage.GetEntriesWithMention(newName)
+	}
+
 	if len(existingNew) > 0 {
-		fmt.Printf("⚠ Warning: @%s already exists in %d %s (mentions will be merged)\n\n",
+		fmt.Printf("⚠ Warning: %s%s already exists in %d %s (%ss will be merged)\n\n",
+			metadataType.Symbol(),
 			newName,
 			len(existingNew),
 			plural("entry", len(existingNew)),
+			metadataType.Name(),
 		)
 	}
 
 	// Show preview (first 5 entries)
-	fmt.Printf("Found %d %s with @%s:\n\n",
+	fmt.Printf("Found %d %s with %s%s:\n\n",
 		len(filePaths),
 		plural("entry", len(filePaths)),
+		metadataType.Symbol(),
 		oldName,
 	)
 
@@ -245,8 +183,10 @@ func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error 
 
 	// Dry run
 	if dryRun {
-		fmt.Printf("Would rename @%s to @%s in %d %s\n",
+		fmt.Printf("Would rename %s%s to %s%s in %d %s\n",
+			metadataType.Symbol(),
 			oldName,
+			metadataType.Symbol(),
 			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
@@ -256,8 +196,10 @@ func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error 
 
 	// Confirmation
 	if !force {
-		fmt.Printf("Rename @%s to @%s in %d %s? (y/N): ",
+		fmt.Printf("Rename %s%s to %s%s in %d %s? (y/N): ",
+			metadataType.Symbol(),
 			oldName,
+			metadataType.Symbol(),
 			newName,
 			len(filePaths),
 			plural("entry", len(filePaths)),
@@ -277,11 +219,14 @@ func (a *App) renameMentions(oldName, newName string, dryRun, force bool) error 
 		)
 	}
 
-	updated, err := a.storage.ReplaceMentionInEntries(
-		oldName,
-		newName,
-		false,
-	)
+	// Call appropriate replace function
+	var updated []string
+	if metadataType == MetadataTypeTag {
+		updated, err = a.storage.ReplaceTagInEntries(oldName, newName, false)
+	} else {
+		updated, err = a.storage.ReplaceMentionInEntries(oldName, newName, false)
+	}
+
 	if err != nil {
 		return fmt.Errorf("rename failed: %w", err)
 	}
@@ -357,47 +302,25 @@ func plural(word string, count int) string {
 	return word + "s"
 }
 
-func validateTagName(tag string) error {
-	if tag == "" {
-		return fmt.Errorf("tag cannot be empty")
+// validateMetadataName is the unified validation function for tags and mentions
+func validateMetadataName(name string, metadataType MetadataType) error {
+	if name == "" {
+		return fmt.Errorf("%s cannot be empty", metadataType.Name())
 	}
 
 	// Must start with letter
-	if !isLetter(rune(tag[0])) {
-		return fmt.Errorf("tag must start with a letter")
+	if !isLetter(rune(name[0])) {
+		return fmt.Errorf("%s must start with a letter", metadataType.Name())
 	}
 
 	// Can only contain alphanumeric, underscore, hyphen
 	pattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
-	if !pattern.MatchString(tag) {
-		return fmt.Errorf("tag can only contain letters, numbers, underscores, and hyphens")
+	if !pattern.MatchString(name) {
+		return fmt.Errorf("%s can only contain letters, numbers, underscores, and hyphens", metadataType.Name())
 	}
 
-	if len(tag) > internal.MaxTagLength {
-		return fmt.Errorf("tag exceeds maximum length of %d characters", internal.MaxTagLength)
-	}
-
-	return nil
-}
-
-func validateMentionName(mention string) error {
-	if mention == "" {
-		return fmt.Errorf("mention cannot be empty")
-	}
-
-	// Must start with letter
-	if !isLetter(rune(mention[0])) {
-		return fmt.Errorf("mention must start with a letter")
-	}
-
-	// Can only contain alphanumeric, underscore, hyphen
-	pattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
-	if !pattern.MatchString(mention) {
-		return fmt.Errorf("mention can only contain letters, numbers, underscores, and hyphens")
-	}
-
-	if len(mention) > internal.MaxMentionLength {
-		return fmt.Errorf("mention exceeds maximum length of %d characters", internal.MaxMentionLength)
+	if len(name) > metadataType.MaxLength() {
+		return fmt.Errorf("%s exceeds maximum length of %d characters", metadataType.Name(), metadataType.MaxLength())
 	}
 
 	return nil

@@ -14,10 +14,12 @@ import (
 
 // FileSystemStorage implements journal entry storage using the filesystem
 type FileSystemStorage struct {
-	basePath string
-	config   *Config
-	index    *Index
-	mu       sync.RWMutex
+	basePath  string
+	config    *Config
+	indexOnce sync.Once
+	index     *Index
+	indexErr  error
+	mu        sync.RWMutex
 }
 
 // NewFileSystemStorage creates a new filesystem-based storage
@@ -372,37 +374,18 @@ func (fs *FileSystemStorage) SearchByKeyword(keyword string, filter EntryFilter)
 // getOrCreateIndex returns the existing index or builds a new one
 // Only builds index for the files in the specified date range
 func (fs *FileSystemStorage) getOrCreateIndex(filter EntryFilter) (*Index, error) {
-	fs.mu.RLock()
-	if fs.index != nil {
-		fs.mu.RUnlock()
-		return fs.index, nil
-	}
-	fs.mu.RUnlock()
+	fs.indexOnce.Do(func() {
+		files, err := fs.findFiles(filter)
+		if err != nil {
+			fs.indexErr = fmt.Errorf("failed to find files for indexing: %w", err)
+			return
+		}
 
-	// Need to build index
-	fs.mu.Lock()
-	defer fs.mu.Unlock()
+		fs.index = NewIndex()
+		fs.indexErr = fs.index.Build(files, fs.config.MaxParseWorkers, fs.parseFile)
+	})
 
-	// Double-check after acquiring write lock
-	if fs.index != nil {
-		return fs.index, nil
-	}
-
-	// Find all files in date range
-	files, err := fs.findFiles(filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find files for indexing: %w", err)
-	}
-
-	// Build index
-	index := NewIndex()
-	err = index.Build(files, fs.config.MaxParseWorkers, fs.parseFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build index: %w", err)
-	}
-
-	fs.index = index
-	return index, nil
+	return fs.index, fs.indexErr
 }
 
 // indexedEntriesToFull converts IndexedEntry results to full JournalEntry objects
@@ -450,6 +433,8 @@ func (fs *FileSystemStorage) InvalidateIndex() {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	fs.index = nil
+	fs.indexErr = nil
+	fs.indexOnce = sync.Once{}
 }
 
 // GetIndex returns the existing index or builds a new one
@@ -641,24 +626,18 @@ func (fs *FileSystemStorage) DeleteEntries(filter EntryFilter) ([]string, error)
 	return deleted, nil
 }
 
-// ReplaceTagInEntries replaces oldTag with newTag in all entries
+// replaceMetadataInEntries is a unified function for replacing tags or mentions
 // Uses case-insensitive matching with proper word boundaries
 // Returns list of updated file paths
-func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun bool) ([]string, error) {
-	// Get entries with old tag using index
-	filePaths, err := fs.GetEntriesWithTag(oldTag)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get entries with tag: %w", err)
-	}
-
+func (fs *FileSystemStorage) replaceMetadataInEntries(oldValue, newValue, symbol string, filePaths []string, dryRun bool) ([]string, error) {
 	if len(filePaths) == 0 {
 		return []string{}, nil
 	}
 
 	// Build regex pattern for case-insensitive replacement
-	// Pattern: #oldTag followed by non-word-char (but not hyphen/underscore)
+	// Pattern: {symbol}oldValue followed by non-word-char (but not hyphen/underscore)
 	// This ensures we match #code but not #code-review
-	pattern := fmt.Sprintf(`(?i)#%s(?:[^a-zA-Z0-9_-]|$)`, regexp.QuoteMeta(oldTag))
+	pattern := fmt.Sprintf(`(?i)%s%s(?:[^a-zA-Z0-9_-]|$)`, regexp.QuoteMeta(symbol), regexp.QuoteMeta(oldValue))
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile regex: %w", err)
@@ -675,13 +654,13 @@ func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun b
 			continue
 		}
 
-		// Replace tag in body (case-insensitive)
-		// Use ReplaceAllStringFunc to preserve the character after the tag
+		// Replace metadata in body (case-insensitive)
+		// Use ReplaceAllStringFunc to preserve the character after the metadata
 		newBody := re.ReplaceAllStringFunc(entry.Body, func(match string) string {
-			// The match includes "#" + tag (case-insensitive) + possibly one trailing character
-			// Find where the tag ends (it starts with # and continues until non-tag-char)
-			if len(match) > 1 && match[0] == '#' {
-				// Skip the # and find the end of the tag
+			// The match includes symbol + value (case-insensitive) + possibly one trailing character
+			// Find where the value ends (it starts with symbol and continues until non-metadata-char)
+			if len(match) > 1 && match[0] == symbol[0] {
+				// Skip the symbol and find the end of the value
 				i := 1
 				for i < len(match) && (match[i] >= 'a' && match[i] <= 'z' ||
 					match[i] >= 'A' && match[i] <= 'Z' ||
@@ -690,9 +669,9 @@ func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun b
 					i++
 				}
 				// Everything after position i is the trailing character(s)
-				return "#" + newTag + match[i:]
+				return symbol + newValue + match[i:]
 			}
-			return "#" + newTag
+			return symbol + newValue
 		})
 
 		// Skip if no changes (shouldn't happen, but safety check)
@@ -703,8 +682,8 @@ func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun b
 		// Update entry body
 		entry.Body = newBody
 
-		// Re-parse to validate and auto-deduplicate tags
-		// This ensures tags like "#code-review #code-review" become single tag
+		// Re-parse to validate and auto-deduplicate metadata
+		// This ensures metadata like "#code-review #code-review" become single instance
 		serialized := SerializeEntry(entry)
 		entry, err = ParseEntry(serialized)
 		if err != nil {
@@ -731,6 +710,19 @@ func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun b
 	return updated, nil
 }
 
+// ReplaceTagInEntries replaces oldTag with newTag in all entries
+// Uses case-insensitive matching with proper word boundaries
+// Returns list of updated file paths
+func (fs *FileSystemStorage) ReplaceTagInEntries(oldTag, newTag string, dryRun bool) ([]string, error) {
+	// Get entries with old tag using index
+	filePaths, err := fs.GetEntriesWithTag(oldTag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entries with tag: %w", err)
+	}
+
+	return fs.replaceMetadataInEntries(oldTag, newTag, "#", filePaths, dryRun)
+}
+
 // ReplaceMentionInEntries replaces oldMention with newMention in all entries
 // Uses case-insensitive matching with proper word boundaries
 // Returns list of updated file paths
@@ -741,80 +733,5 @@ func (fs *FileSystemStorage) ReplaceMentionInEntries(oldMention, newMention stri
 		return nil, fmt.Errorf("failed to get entries with mention: %w", err)
 	}
 
-	if len(filePaths) == 0 {
-		return []string{}, nil
-	}
-
-	// Build regex pattern for case-insensitive replacement
-	// Pattern: @oldMention followed by non-word-char (but not hyphen/underscore)
-	pattern := fmt.Sprintf(`(?i)@%s(?:[^a-zA-Z0-9_-]|$)`, regexp.QuoteMeta(oldMention))
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile regex: %w", err)
-	}
-
-	var updated []string
-	var errs []error
-
-	for _, filePath := range filePaths {
-		// Read current entry
-		entry, err := fs.parseFile(filePath)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to read %s: %w", filePath, err))
-			continue
-		}
-
-		// Replace mention in body (case-insensitive)
-		// Use ReplaceAllStringFunc to preserve the character after the mention
-		newBody := re.ReplaceAllStringFunc(entry.Body, func(match string) string {
-			// The match includes "@" + mention (case-insensitive) + possibly one trailing character
-			// Find where the mention ends (it starts with @ and continues until non-mention-char)
-			if len(match) > 1 && match[0] == '@' {
-				// Skip the @ and find the end of the mention
-				i := 1
-				for i < len(match) && (match[i] >= 'a' && match[i] <= 'z' ||
-					match[i] >= 'A' && match[i] <= 'Z' ||
-					match[i] >= '0' && match[i] <= '9' ||
-					match[i] == '_' || match[i] == '-') {
-					i++
-				}
-				// Everything after position i is the trailing character(s)
-				return "@" + newMention + match[i:]
-			}
-			return "@" + newMention
-		})
-
-		// Skip if no changes (shouldn't happen, but safety check)
-		if newBody == entry.Body {
-			continue
-		}
-
-		// Update entry body
-		entry.Body = newBody
-
-		// Re-parse to validate and auto-deduplicate mentions
-		serialized := SerializeEntry(entry)
-		entry, err = ParseEntry(serialized)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to parse updated entry %s: %w", filePath, err))
-			continue
-		}
-
-		// Write updated entry (unless dry run)
-		if !dryRun {
-			if err := fs.UpdateEntry(filePath, entry); err != nil {
-				errs = append(errs, fmt.Errorf("failed to update %s: %w", filePath, err))
-				continue
-			}
-		}
-
-		updated = append(updated, filePath)
-	}
-
-	// Return results
-	if len(errs) > 0 {
-		return updated, errors.Join(errs...)
-	}
-
-	return updated, nil
+	return fs.replaceMetadataInEntries(oldMention, newMention, "@", filePaths, dryRun)
 }

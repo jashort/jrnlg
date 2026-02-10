@@ -14,7 +14,7 @@ const (
 const (
 	// MaxCollisionAttempts is the maximum number of timestamp collision suffixes to try
 	// before giving up. Entries with the same timestamp get suffixes: -01, -02, etc.
-	MaxCollisionAttempts = 100
+	MaxCollisionAttempts = 10
 )
 
 // Date range constants
@@ -27,12 +27,6 @@ const (
 	DefaultStartMonth = 1
 	// DefaultEndMonth is the last month (December)
 	DefaultEndMonth = 12
-)
-
-// Index configuration
-const (
-	// DefaultIndexCacheSize is the default maximum number of entries to cache in memory
-	DefaultIndexCacheSize = 10000
 )
 
 // Date and time formats
