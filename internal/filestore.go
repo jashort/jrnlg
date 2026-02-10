@@ -72,8 +72,8 @@ func (fs *FileSystemStorage) GetEntry(timestamp time.Time) (*JournalEntry, error
 	}
 
 	// Try with collision suffixes (-01, -02, etc.)
-	for i := 1; i < 100; i++ {
-		path := fmt.Sprintf("%s-%02d.md", basePath[:len(basePath)-3], i)
+	for i := 1; i < MaxCollisionAttempts; i++ {
+		path := fmt.Sprintf("%s-%02d%s", basePath[:len(basePath)-len(MarkdownExt)], i, MarkdownExt)
 		if entry, err := fs.parseFile(path); err == nil {
 			return entry, nil
 		}
@@ -83,7 +83,7 @@ func (fs *FileSystemStorage) GetEntry(timestamp time.Time) (*JournalEntry, error
 		}
 	}
 
-	return nil, fmt.Errorf("entry not found: %s", timestamp.Format("2006-01-02 15:04:05"))
+	return nil, fmt.Errorf("entry not found: %s", timestamp.Format(FileTimestampFormat))
 }
 
 // ListEntries retrieves all entries matching the given filter
@@ -147,8 +147,7 @@ func (fs *FileSystemStorage) ListEntries(filter EntryFilter) ([]*JournalEntry, e
 
 	// Log any errors (non-fatal)
 	for err := range errChan {
-		// TODO: Add proper logging when we have a logger
-		_ = err
+		fs.config.Logger.Warn("skipping invalid file during list", "error", err)
 	}
 
 	// Sort by timestamp (oldest first)
@@ -176,8 +175,8 @@ func (fs *FileSystemStorage) findFiles(filter EntryFilter) ([]string, error) {
 	var files []string
 
 	// Determine year and month ranges to scan
-	startYear, startMonth := 1900, 1
-	endYear, endMonth := 2100, 12
+	startYear, startMonth := DefaultStartYear, DefaultStartMonth
+	endYear, endMonth := DefaultEndYear, DefaultEndMonth
 
 	if filter.StartDate != nil {
 		utc := filter.StartDate.UTC()
@@ -255,7 +254,7 @@ func (fs *FileSystemStorage) buildFilePath(timestamp time.Time) string {
 }
 
 // findAvailablePath checks if file exists and appends suffix if needed
-// Returns empty string if too many collisions (>= 100)
+// Returns empty string if too many collisions (>= MaxCollisionAttempts)
 func (fs *FileSystemStorage) findAvailablePath(basePath string) string {
 	// Check if base path is available
 	if _, err := os.Stat(basePath); os.IsNotExist(err) {
@@ -263,9 +262,9 @@ func (fs *FileSystemStorage) findAvailablePath(basePath string) string {
 	}
 
 	// Try appending suffixes
-	baseWithoutExt := basePath[:len(basePath)-3] // Remove .md
-	for i := 1; i < 100; i++ {
-		path := fmt.Sprintf("%s-%02d.md", baseWithoutExt, i)
+	baseWithoutExt := basePath[:len(basePath)-len(MarkdownExt)] // Remove extension
+	for i := 1; i < MaxCollisionAttempts; i++ {
+		path := fmt.Sprintf("%s-%02d%s", baseWithoutExt, i, MarkdownExt)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return path
 		}
@@ -277,7 +276,7 @@ func (fs *FileSystemStorage) findAvailablePath(basePath string) string {
 // ensureDirectories creates year and month directories if they don't exist
 func (fs *FileSystemStorage) ensureDirectories(filePath string) error {
 	dir := filepath.Dir(filePath)
-	return os.MkdirAll(dir, 0755)
+	return os.MkdirAll(dir, DirPermissions)
 }
 
 // writeAtomic writes content to a file atomically using temp file + rename
@@ -287,7 +286,7 @@ func (fs *FileSystemStorage) writeAtomic(filePath string, content []byte) error 
 	tmpFile := filepath.Join(dir, ".tmp-"+filepath.Base(filePath))
 
 	// Write to temp file
-	if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+	if err := os.WriteFile(tmpFile, content, FilePermissions); err != nil {
 		return err
 	}
 
@@ -533,8 +532,8 @@ func (fs *FileSystemStorage) GetEntryPath(timestamp time.Time) (string, error) {
 	}
 
 	// Try with collision suffixes (-01, -02, etc.)
-	for i := 1; i < 100; i++ {
-		path := fmt.Sprintf("%s-%02d.md", basePath[:len(basePath)-3], i)
+	for i := 1; i < MaxCollisionAttempts; i++ {
+		path := fmt.Sprintf("%s-%02d%s", basePath[:len(basePath)-len(MarkdownExt)], i, MarkdownExt)
 		if _, err := os.Stat(path); err == nil {
 			return path, nil
 		}
@@ -543,7 +542,7 @@ func (fs *FileSystemStorage) GetEntryPath(timestamp time.Time) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("entry not found: %s", timestamp.Format("2006-01-02 15:04:05"))
+	return "", fmt.Errorf("entry not found: %s", timestamp.Format(FileTimestampFormat))
 }
 
 // UpdateEntry updates an existing entry atomically

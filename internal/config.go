@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,11 +10,12 @@ import (
 
 // Config holds configuration for journal storage
 type Config struct {
-	StoragePath     string   // Path to store journal entries
-	IndexCacheSize  int      // Maximum number of entries to cache in memory
-	ParallelParse   bool     // Enable parallel parsing of entries
-	MaxParseWorkers int      // Maximum number of parallel parsing workers
-	EditorArgs      []string // Additional arguments to pass to the editor
+	StoragePath     string       // Path to store journal entries
+	IndexCacheSize  int          // Maximum number of entries to cache in memory
+	ParallelParse   bool         // Enable parallel parsing of entries
+	MaxParseWorkers int          // Maximum number of parallel parsing workers
+	EditorArgs      []string     // Additional arguments to pass to the editor
+	Logger          *slog.Logger // Structured logger
 }
 
 // DefaultConfig returns a configuration with default values
@@ -23,11 +25,33 @@ func DefaultConfig() *Config {
 		homeDir = "."
 	}
 
+	// Create logger with text handler to stderr
+	// Default level is INFO, can be configured via JRNLG_LOG_LEVEL env var
+	logLevel := slog.LevelInfo
+	if level := os.Getenv("JRNLG_LOG_LEVEL"); level != "" {
+		switch strings.ToUpper(level) {
+		case "DEBUG":
+			logLevel = slog.LevelDebug
+		case "INFO":
+			logLevel = slog.LevelInfo
+		case "WARN", "WARNING":
+			logLevel = slog.LevelWarn
+		case "ERROR":
+			logLevel = slog.LevelError
+		}
+	}
+
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+	logger := slog.New(handler)
+
 	return &Config{
 		StoragePath:     filepath.Join(homeDir, ".jrnlg", "entries"),
-		IndexCacheSize:  10000,
+		IndexCacheSize:  DefaultIndexCacheSize,
 		ParallelParse:   true,
 		MaxParseWorkers: runtime.NumCPU(),
+		Logger:          logger,
 	}
 }
 

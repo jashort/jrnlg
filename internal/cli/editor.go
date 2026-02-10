@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+
+	"github.com/jashort/jrnlg/internal"
 )
 
 // OpenEditor opens an editor with the given initial content and returns the edited content
@@ -13,7 +15,7 @@ func OpenEditor(initialContent string, editorArgs []string) (string, error) {
 	editor := getEditorCommand()
 
 	// 2. Create temp file
-	tmpFile, err := os.CreateTemp("", "jrnlg-*.md")
+	tmpFile, err := os.CreateTemp("", "jrnlg-*"+internal.MarkdownExt)
 	if err != nil {
 		return "", err
 	}

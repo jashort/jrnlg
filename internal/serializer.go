@@ -19,5 +19,5 @@ func SerializeEntry(entry *JournalEntry) string {
 // Format: Monday 2006-01-02 3:04 PM MST
 // Example: Sunday 2026-02-08 8:31 AM PST
 func FormatTimestamp(timestamp time.Time) string {
-	return timestamp.Format("Monday 2006-01-02 3:04 PM MST")
+	return timestamp.Format(TimestampLayout)
 }

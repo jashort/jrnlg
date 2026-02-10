@@ -39,8 +39,8 @@ func (idx *Index) Build(files []string, maxWorkers int, parseFunc func(string) (
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	if maxWorkers < 1 {
-		maxWorkers = 1
+	if maxWorkers < MinWorkers {
+		maxWorkers = MinWorkers
 	}
 
 	// Parse files in parallel

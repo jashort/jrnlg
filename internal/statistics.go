@@ -10,9 +10,9 @@ type Statistics struct {
 	Period      PeriodInfo
 	Summary     SummaryStats
 	Tags        []TagStat     // All tags (for filtered view)
-	TopTags     []TagStat     // Top 5 only
+	TopTags     []TagStat     // Top N only (see TopItemsLimit constant)
 	Mentions    []MentionStat // All mentions
-	TopMentions []MentionStat // Top 5 only
+	TopMentions []MentionStat // Top N only (see TopItemsLimit constant)
 	Patterns    ActivityPatterns
 	FilteredBy  *FilterInfo // nil if not filtered
 }
@@ -108,9 +108,9 @@ func CalculateStatistics(entries []*IndexedEntry, startDate, endDate time.Time, 
 
 	// Aggregate tags and mentions
 	stats.Tags = aggregateTags(entries)
-	stats.TopTags = topN(stats.Tags, 5)
+	stats.TopTags = topN(stats.Tags, TopItemsLimit)
 	stats.Mentions = aggregateMentions(entries)
-	stats.TopMentions = topNMentions(stats.Mentions, 5)
+	stats.TopMentions = topNMentions(stats.Mentions, TopItemsLimit)
 
 	// Calculate activity patterns
 	stats.Patterns = calculateActivityPatterns(entries)
@@ -167,7 +167,7 @@ func calculateSummaryStats(entries []*IndexedEntry, startDate, endDate time.Time
 	totalDays := calculateTotalDays(startDate, endDate)
 	activeDaysPct := 0.0
 	if totalDays > 0 {
-		activeDaysPct = float64(activeDayCount) / float64(totalDays) * 100.0
+		activeDaysPct = float64(activeDayCount) / float64(totalDays) * PercentageMultiplier
 	}
 
 	avgPerActiveDay := 0.0
@@ -414,11 +414,11 @@ func calculateActivityPatterns(entries []*IndexedEntry) ActivityPatterns {
 func categorizeTimeOfDay(t time.Time) string {
 	hour := t.Hour()
 
-	if hour >= 5 && hour < 12 {
+	if hour >= MorningStart && hour < AfternoonStart {
 		return TimeMorning
-	} else if hour >= 12 && hour < 17 {
+	} else if hour >= AfternoonStart && hour < EveningStart {
 		return TimeAfternoon
-	} else if hour >= 17 && hour < 21 {
+	} else if hour >= EveningStart && hour < NightStart {
 		return TimeEvening
 	}
 	return TimeNight
